@@ -32,6 +32,8 @@ sentence-transformers>=2.2.0
 openai-whisper>=20231117
 elevenlabs>=0.2.0
 pydub>=0.25.0
+speechrecognition>=3.10.0
+numpy>=1.21.0
 
 # Agent Framework
 autogen-agentchat>=0.7.0

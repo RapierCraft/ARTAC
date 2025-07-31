@@ -11,7 +11,7 @@ interface MetricCardProps {
   value: string | number
   total?: number
   icon: LucideIcon
-  trend?: number
+  trend?: number | null
   color: string
   description?: string
 }

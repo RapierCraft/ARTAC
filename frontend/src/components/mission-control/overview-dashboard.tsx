@@ -105,28 +105,28 @@ export function OverviewDashboard() {
             value={metrics.activeAgents}
             total={metrics.totalAgents}
             icon={Users}
-            trend={+5}
+            trend={metrics.totalAgents > 0 ? null : undefined}
             color="text-primary"
           />
           <MetricCard
             title="Active Tasks"
             value={metrics.totalTasks}
             icon={Code}
-            trend={+12}
+            trend={metrics.totalTasks > 0 ? null : undefined}
             color="text-green-500"
           />
           <MetricCard
             title="Success Rate"
             value={`${metrics.taskSuccessRate.toFixed(1)}%`}
             icon={CheckCircle}
-            trend={+2.3}
+            trend={(metrics.completedTasks + metrics.failedTasks) > 0 ? null : undefined}
             color="text-emerald-500"
           />
           <MetricCard
             title="Avg Performance"
             value={`${metrics.avgPerformance.toFixed(1)}%`}
             icon={TrendingUp}
-            trend={+1.8}
+            trend={agents.length > 0 ? null : undefined}
             color="text-purple-500"
           />
         </motion.div>

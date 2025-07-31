@@ -26,7 +26,12 @@ interface SystemStore {
   updateAgentStatus: (agentId: string, status: string) => Promise<void>
   setError: (error: string | null) => void
   clearError: () => void
+  checkBackendHealth: () => Promise<boolean>
+  startHealthCheck: () => void
+  stopHealthCheck: () => void
 }
+
+let healthCheckInterval: NodeJS.Timeout | null = null
 
 export const useSystemStore = create<SystemStore>()(
   devtools(
@@ -74,6 +79,9 @@ export const useSystemStore = create<SystemStore>()(
           ])
 
           set({ isInitialized: true, isLoading: false, isOfflineMode: false })
+          
+          // Start health check polling
+          get().startHealthCheck()
         } catch (error) {
           // Backend unavailable - this is expected when backend isn't running
           // Use mock data for offline mode
@@ -94,6 +102,9 @@ export const useSystemStore = create<SystemStore>()(
             isOfflineMode: true,
             error: null
           })
+          
+          // Start health check polling even in offline mode
+          get().startHealthCheck()
         }
       },
 
@@ -294,6 +305,83 @@ export const useSystemStore = create<SystemStore>()(
       // Clear error
       clearError: () => {
         set({ error: null })
+      },
+
+      // Check backend health
+      checkBackendHealth: async () => {
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 3000)
+          
+          const response = await fetch(getApiUrl('/health'), { 
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'omit'
+          })
+          
+          clearTimeout(timeoutId)
+          return response.ok
+        } catch (error) {
+          return false
+        }
+      },
+
+      // Start health check polling
+      startHealthCheck: () => {
+        // Clear any existing interval
+        if (healthCheckInterval) {
+          clearInterval(healthCheckInterval)
+        }
+
+        // Check every 10 seconds
+        healthCheckInterval = setInterval(async () => {
+          const { isOfflineMode } = get()
+          const isHealthy = await get().checkBackendHealth()
+
+          if (isOfflineMode && isHealthy) {
+            // Backend came online - switch to real data
+            console.log('🟢 Backend is now online, switching to real data...')
+            try {
+              await Promise.all([
+                get().fetchSystemStatus(),
+                get().fetchAgents(),
+                get().fetchAgentStatuses(),
+                get().fetchTasks(),
+              ])
+              set({ isOfflineMode: false, error: null })
+              console.log('✅ Successfully switched to real data')
+            } catch (error) {
+              console.warn('⚠️ Failed to fetch real data, staying in offline mode')
+            }
+          } else if (!isOfflineMode && !isHealthy) {
+            // Backend went offline - switch to fallback data
+            console.log('🔴 Backend went offline, switching to fallback data...')
+            const mockData = getMockData()
+            const agentStatuses: Record<string, AgentStatus> = {}
+            
+            mockData.agentStatuses.forEach((status) => {
+              agentStatuses[status.agent_id] = status
+            })
+
+            set({ 
+              systemStatus: mockData.systemStatus,
+              agents: mockData.agents,
+              agentStatuses,
+              tasks: mockData.tasks,
+              isOfflineMode: true,
+              error: null
+            })
+            console.log('✅ Successfully switched to fallback data')
+          }
+        }, 10000) // Check every 10 seconds
+      },
+
+      // Stop health check polling
+      stopHealthCheck: () => {
+        if (healthCheckInterval) {
+          clearInterval(healthCheckInterval)
+          healthCheckInterval = null
+        }
       },
     }),
     {

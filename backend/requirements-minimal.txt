@@ -11,6 +11,7 @@ psycopg2-binary==2.9.9
 
 # Core utilities
 pydantic==2.5.0
+pydantic-settings==2.1.0
 python-dotenv==1.0.0
 httpx==0.25.2
 aiofiles==23.2.1
@@ -25,3 +26,12 @@ psutil==5.9.6
 
 # Logging
 structlog==23.2.0
+
+# Voice Processing
+elevenlabs>=0.2.0
+openai-whisper>=20231117
+pydub>=0.25.0
+
+# WebSocket support
+python-socketio==5.10.0
+websockets==12.0

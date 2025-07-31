@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ELEVENLABS_API_KEY: Optional[str] = None
     
+    # Voice Interface Configuration
+    DEFAULT_VOICE_EMOTION: str = "neutral"
+    VOICE_GENERATION_TIMEOUT: int = 30
+    
     # Agent Configuration
     MAX_AGENTS: int = 100
     AGENT_TIMEOUT: int = 300

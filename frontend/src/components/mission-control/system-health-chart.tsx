@@ -4,31 +4,52 @@ import { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
 import { useSystemStore } from '@/stores/system-store'
 
-// Generate mock historical data for demonstration
-const generateMockData = () => {
-  const now = new Date()
-  const data = []
-  
-  for (let i = 23; i >= 0; i--) {
-    const time = new Date(now.getTime() - i * 60 * 60 * 1000)
-    data.push({
-      time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      timestamp: time.getTime(),
-      systemHealth: Math.max(85, Math.min(99, 92 + Math.sin(i * 0.3) * 5 + Math.random() * 3)),
-      activeAgents: Math.max(8, Math.min(15, 12 + Math.sin(i * 0.2) * 2 + Math.random() * 2)),
-      activeTasks: Math.max(15, Math.min(35, 25 + Math.sin(i * 0.4) * 5 + Math.random() * 4)),
-      cpuUsage: Math.max(20, Math.min(80, 45 + Math.sin(i * 0.25) * 15 + Math.random() * 8)),
-      memoryUsage: Math.max(30, Math.min(70, 50 + Math.sin(i * 0.15) * 10 + Math.random() * 5)),
-    })
-  }
-  
-  return data
-}
-
 export function SystemHealthChart() {
-  const { systemStatus } = useSystemStore()
+  const { systemStatus, isOfflineMode } = useSystemStore()
   
-  const data = useMemo(() => generateMockData(), [])
+  // In real implementation, this would come from API with historical data
+  // For now, show current status as a single point or placeholder
+  const data = useMemo(() => {
+    if (!systemStatus || (systemStatus.total_agents === 0 && !isOfflineMode)) {
+      return []
+    }
+    
+    // If in offline mode, generate some demo data
+    if (isOfflineMode) {
+      const now = new Date()
+      const demoData = []
+      
+      for (let i = 5; i >= 0; i--) {
+        const time = new Date(now.getTime() - i * 10 * 60 * 1000) // 10 minute intervals
+        demoData.push({
+          time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: time.getTime(),
+          systemHealth: Math.max(85, Math.min(99, 92 + Math.sin(i * 0.3) * 5 + Math.random() * 3)),
+          activeAgents: Math.max(3, Math.min(5, 4 + Math.random())),
+          activeTasks: Math.max(5, Math.min(15, 10 + Math.random() * 3)),
+          cpuUsage: Math.max(20, Math.min(40, 30 + Math.random() * 8)),
+          memoryUsage: Math.max(30, Math.min(50, 40 + Math.random() * 5)),
+        })
+      }
+      return demoData
+    }
+    
+    // For real data, show current status
+    const now = new Date()
+    const systemHealth = systemStatus.total_agents > 0 
+      ? (systemStatus.active_agents / systemStatus.total_agents) * 100 
+      : 0
+      
+    return [{
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: now.getTime(),
+      systemHealth: systemHealth,
+      activeAgents: systemStatus.active_agents || 0,
+      activeTasks: systemStatus.total_active_tasks || 0,
+      cpuUsage: 0, // Would come from real metrics
+      memoryUsage: 0, // Would come from real metrics
+    }]
+  }, [systemStatus, isOfflineMode])
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -46,11 +67,28 @@ export function SystemHealthChart() {
     return null
   }
 
+  if (data.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="h-64 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-muted-foreground text-sm">No system data available</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {isOfflineMode ? "Connect to backend to see real metrics" : "Start some agents to see system health"}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* System Health Area Chart */}
       <div className="h-64">
-        <h4 className="text-sm font-medium text-muted-foreground mb-3">System Health Over Time</h4>
+        <h4 className="text-sm font-medium text-muted-foreground mb-3">
+          System Health Over Time {isOfflineMode && <span className="text-xs text-yellow-500">(Demo Data)</span>}
+        </h4>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <defs>

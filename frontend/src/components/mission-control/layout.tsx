@@ -12,7 +12,7 @@ export function MissionControlLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false
   )
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true) // Start with right panel collapsed
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false) // Start with right panel open to show voice interface
   const [sidebarWidth, setSidebarWidth] = useState(320) // Increased default width
 
   // Handle responsive sidebar on window resize
@@ -86,7 +86,7 @@ export function MissionControlLayout() {
         </motion.aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 relative z-10">
           <MainContent />
         </main>
 
@@ -98,7 +98,7 @@ export function MissionControlLayout() {
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
           className={cn(
-            'flex-shrink-0 border-l border-border bg-card overflow-y-auto',
+            'flex-shrink-0 border-l border-border bg-card overflow-y-auto relative z-20',
             rightPanelCollapsed && 'overflow-hidden'
           )}
         >

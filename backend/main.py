@@ -24,6 +24,9 @@ from api.v1.router import api_router
 from services.agent_manager import AgentManager
 from services.rag_service import RAGService
 from services.process_manager import process_manager
+from services.ollama_service import ollama_service
+from services.voice_service import voice_service
+from services.whisper_service import whisper_service
 
 # Setup logging
 setup_logging()
@@ -42,12 +45,45 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize services
     app.state.agent_manager = AgentManager()
     app.state.rag_service = RAGService()
+    app.state.ollama_service = ollama_service
+    app.state.voice_service = voice_service
+    app.state.whisper_service = whisper_service
     
     await app.state.rag_service.initialize()
     logger.info("✅ RAG service initialized")
     
     await app.state.agent_manager.initialize()
     logger.info("✅ Agent manager initialized")
+    
+    # Initialize Ollama (non-blocking - continue if it fails)
+    try:
+        ollama_initialized = await ollama_service.initialize()
+        if ollama_initialized:
+            logger.info("✅ Ollama service initialized and ready for agent generation")
+        else:
+            logger.info("⚠️ Ollama service not available - will use fallback agent generation")
+    except Exception as e:
+        logger.warning(f"⚠️ Ollama initialization failed: {e} - continuing with limited functionality")
+    
+    # Initialize Voice service (non-blocking - continue if it fails)
+    try:
+        voice_initialized = await voice_service.initialize()
+        if voice_initialized:
+            logger.info("🎤 Voice service initialized - ready for voice conversations!")
+        else:
+            logger.info("⚠️ Voice service not available - check ElevenLabs API key")
+    except Exception as e:
+        logger.warning(f"⚠️ Voice initialization failed: {e} - continuing without voice features")
+    
+    # Initialize Whisper service (non-blocking - continue if it fails)
+    try:
+        whisper_initialized = await whisper_service.initialize()
+        if whisper_initialized:
+            logger.info("🎧 Whisper STT service initialized - ready for speech recognition!")
+        else:
+            logger.info("⚠️ Whisper service not available - check Whisper installation")
+    except Exception as e:
+        logger.warning(f"⚠️ Whisper initialization failed: {e} - continuing without STT features")
     
     # Start process monitoring
     monitor_task = asyncio.create_task(process_manager.monitor_processes())

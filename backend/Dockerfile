@@ -11,8 +11,12 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a mock claude command for testing
+RUN echo '#!/bin/bash\necho "Mock Claude CLI v1.0.0\nThis is a test response from mock Claude."' > /usr/local/bin/claude && \
+    chmod +x /usr/local/bin/claude
+
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY requirements-minimal.txt requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \

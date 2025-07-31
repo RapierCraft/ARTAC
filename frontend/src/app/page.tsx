@@ -7,7 +7,7 @@ import { useSystemStore } from '@/stores/system-store'
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
-  const { initializeSystem, isInitialized } = useSystemStore()
+  const { initializeSystem, isInitialized, stopHealthCheck } = useSystemStore()
 
   useEffect(() => {
     const initialize = async () => {
@@ -21,7 +21,12 @@ export default function HomePage() {
     }
 
     initialize()
-  }, [initializeSystem])
+    
+    // Cleanup health check on unmount
+    return () => {
+      stopHealthCheck()
+    }
+  }, [initializeSystem, stopHealthCheck])
 
   if (isLoading || !isInitialized) {
     return <LoadingScreen />

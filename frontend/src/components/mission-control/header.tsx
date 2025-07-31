@@ -13,7 +13,8 @@ import {
   Activity,
   Shield,
   Zap,
-  RefreshCcw
+  RefreshCcw,
+  MessageSquare
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ import { SystemStatusIndicator } from './system-status'
 import { useSystemStore } from '@/stores/system-store'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import Link from 'next/link'
 
 interface HeaderProps {
   onToggleSidebar: () => void
@@ -65,7 +67,18 @@ export function Header({
             </motion.div>
             <div>
               <h1 className="text-lg font-bold gradient-text">ARTAC</h1>
-              <p className="text-xs text-muted-foreground">Mission Control</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-xs text-muted-foreground">Mission Control</p>
+                <div className="flex items-center space-x-1">
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    isOfflineMode ? "bg-yellow-500 animate-pulse" : "bg-green-500"
+                  )} />
+                  <span className="text-xs text-muted-foreground">
+                    {isOfflineMode ? "Offline" : "Online"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -106,6 +119,17 @@ export function Header({
             </div>
           )}
 
+          {/* Communication App Link */}
+          <Link href="/communication">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          </Link>
+
           {/* Notifications */}
           <Button
             variant="ghost"
@@ -131,6 +155,20 @@ export function Header({
 
           {/* Theme Toggle */}
           <ThemeToggle />
+
+          {/* Voice Panel Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleRightPanel}
+            className={cn(
+              "text-muted-foreground hover:text-foreground",
+              !rightPanelCollapsed && "text-primary bg-primary/10"
+            )}
+            title={rightPanelCollapsed ? "Show Voice Interface" : "Hide Voice Interface"}
+          >
+            <Mic className="h-4 w-4" />
+          </Button>
 
           {/* Settings */}
           <Button
