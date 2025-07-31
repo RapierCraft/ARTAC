@@ -86,3 +86,8 @@ temp/
 vector_db/
 embeddings/
 chroma_db/
+
+# Documentation and Scripts
+*.md
+!README.md
+*.sh
