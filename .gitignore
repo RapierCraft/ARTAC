@@ -91,3 +91,5 @@ chroma_db/
 *.md
 !README.md
 *.sh
+*.yml
+*.yaml
