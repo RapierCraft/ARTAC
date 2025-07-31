@@ -18,12 +18,12 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
   const [transcript, setTranscript] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       recognitionRef.current = new SpeechRecognition()
       
       const recognition = recognitionRef.current
@@ -35,7 +35,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
         setIsListening(true)
       }
 
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: any) => {
         let finalTranscript = ''
         let interimTranscript = ''
 
@@ -56,7 +56,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
         }
       }
 
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error)
         setIsListening(false)
       }
