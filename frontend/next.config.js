@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
+  serverExternalPackages: [],
   images: {
     domains: ['localhost'],
     unoptimized: process.env.NODE_ENV === 'development',
