@@ -1,0 +1,294 @@
+import { create } from 'zustand'
+import { devtools } from 'zustand/middleware'
+import { Agent, AgentStatus, SystemStatus, Task } from '@/types/agent'
+import { getApiUrl } from '@/lib/utils'
+import { getMockData } from '@/lib/placeholder-data'
+
+interface SystemStore {
+  // State
+  isInitialized: boolean
+  systemStatus: SystemStatus | null
+  agents: Agent[]
+  agentStatuses: Record<string, AgentStatus>
+  tasks: Task[]
+  isLoading: boolean
+  error: string | null
+  isOfflineMode: boolean
+
+  // Actions
+  initializeSystem: () => Promise<void>
+  fetchSystemStatus: () => Promise<void>
+  fetchAgents: () => Promise<void>
+  fetchAgentStatuses: () => Promise<void>
+  fetchTasks: () => Promise<void>
+  createAgent: (agentData: Partial<Agent>) => Promise<Agent | null>
+  assignTask: (agentId: string, taskData: Partial<Task>) => Promise<string | null>
+  updateAgentStatus: (agentId: string, status: string) => Promise<void>
+  setError: (error: string | null) => void
+  clearError: () => void
+}
+
+export const useSystemStore = create<SystemStore>()(
+  devtools(
+    (set, get) => ({
+      // Initial state
+      isInitialized: false,
+      systemStatus: null,
+      agents: [],
+      agentStatuses: {},
+      tasks: [],
+      isLoading: false,
+      error: null,
+      isOfflineMode: false,
+
+      // Initialize the entire system
+      initializeSystem: async () => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          // Try to connect to backend
+          const response = await fetch(getApiUrl('/health'), { 
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          })
+          
+          if (!response.ok) {
+            throw new Error('Backend not available')
+          }
+
+          // Backend is available - fetch real data
+          await Promise.all([
+            get().fetchSystemStatus(),
+            get().fetchAgents(),
+            get().fetchAgentStatuses(),
+            get().fetchTasks(),
+          ])
+
+          set({ isInitialized: true, isLoading: false, isOfflineMode: false })
+        } catch (error) {
+          console.warn('Backend unavailable, using mock data:', error)
+          
+          // Use mock data for offline mode
+          const mockData = getMockData()
+          const agentStatuses: Record<string, AgentStatus> = {}
+          
+          mockData.agentStatuses.forEach((status) => {
+            agentStatuses[status.agent_id] = status
+          })
+
+          set({ 
+            systemStatus: mockData.systemStatus,
+            agents: mockData.agents,
+            agentStatuses,
+            tasks: mockData.tasks,
+            isInitialized: true,
+            isLoading: false,
+            isOfflineMode: true,
+            error: null
+          })
+        }
+      },
+
+      // Fetch system status
+      fetchSystemStatus: async () => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          // Return early if in offline mode - data already set
+          return
+        }
+
+        try {
+          const response = await fetch(getApiUrl('/api/v1/system/status'))
+          if (!response.ok) throw new Error('Failed to fetch system status')
+          
+          const systemStatus = await response.json()
+          set({ systemStatus })
+        } catch (error) {
+          console.error('Failed to fetch system status:', error)
+          set({ error: 'Failed to fetch system status' })
+        }
+      },
+
+      // Fetch all agents
+      fetchAgents: async () => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          return
+        }
+
+        try {
+          const response = await fetch(getApiUrl('/api/v1/agents'))
+          if (!response.ok) throw new Error('Failed to fetch agents')
+          
+          const agents = await response.json()
+          set({ agents })
+        } catch (error) {
+          console.error('Failed to fetch agents:', error)
+          set({ error: 'Failed to fetch agents' })
+        }
+      },
+
+      // Fetch agent statuses
+      fetchAgentStatuses: async () => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          return
+        }
+
+        try {
+          const response = await fetch(getApiUrl('/api/v1/agents/status'))
+          if (!response.ok) throw new Error('Failed to fetch agent statuses')
+          
+          const statuses = await response.json()
+          const agentStatuses: Record<string, AgentStatus> = {}
+          
+          statuses.forEach((status: AgentStatus) => {
+            agentStatuses[status.agent_id] = status
+          })
+          
+          set({ agentStatuses })
+        } catch (error) {
+          console.error('Failed to fetch agent statuses:', error)
+          set({ error: 'Failed to fetch agent statuses' })
+        }
+      },
+
+      // Fetch all tasks
+      fetchTasks: async () => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          return
+        }
+
+        try {
+          const response = await fetch(getApiUrl('/api/v1/tasks'))
+          if (!response.ok) throw new Error('Failed to fetch tasks')
+          
+          const tasks = await response.json()
+          set({ tasks })
+        } catch (error) {
+          console.error('Failed to fetch tasks:', error)
+          set({ error: 'Failed to fetch tasks' })
+        }
+      },
+
+      // Create a new agent
+      createAgent: async (agentData: Partial<Agent>) => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          set({ error: 'Cannot create agents in offline mode' })
+          return null
+        }
+
+        try {
+          const response = await fetch(getApiUrl('/api/v1/agents'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(agentData),
+          })
+
+          if (!response.ok) throw new Error('Failed to create agent')
+          
+          const newAgent = await response.json()
+          
+          // Update local state
+          set(state => ({
+            agents: [...state.agents, newAgent]
+          }))
+          
+          // Refresh agent statuses
+          await get().fetchAgentStatuses()
+          
+          return newAgent
+        } catch (error) {
+          console.error('Failed to create agent:', error)
+          set({ error: 'Failed to create agent' })
+          return null
+        }
+      },
+
+      // Assign task to agent
+      assignTask: async (agentId: string, taskData: Partial<Task>) => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          set({ error: 'Cannot assign tasks in offline mode' })
+          return null
+        }
+
+        try {
+          const response = await fetch(getApiUrl(`/api/v1/agents/${agentId}/tasks`), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(taskData),
+          })
+
+          if (!response.ok) throw new Error('Failed to assign task')
+          
+          const result = await response.json()
+          
+          // Refresh tasks and agent statuses
+          await Promise.all([
+            get().fetchTasks(),
+            get().fetchAgentStatuses(),
+          ])
+          
+          return result.task_id
+        } catch (error) {
+          console.error('Failed to assign task:', error)
+          set({ error: 'Failed to assign task' })
+          return null
+        }
+      },
+
+      // Update agent status
+      updateAgentStatus: async (agentId: string, status: string) => {
+        const { isOfflineMode } = get()
+        
+        if (isOfflineMode) {
+          set({ error: 'Cannot update agent status in offline mode' })
+          return
+        }
+
+        try {
+          const response = await fetch(getApiUrl(`/api/v1/agents/${agentId}/status`), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status }),
+          })
+
+          if (!response.ok) throw new Error('Failed to update agent status')
+          
+          // Refresh agent statuses
+          await get().fetchAgentStatuses()
+        } catch (error) {
+          console.error('Failed to update agent status:', error)
+          set({ error: 'Failed to update agent status' })
+        }
+      },
+
+      // Set error
+      setError: (error: string | null) => {
+        set({ error })
+      },
+
+      // Clear error
+      clearError: () => {
+        set({ error: null })
+      },
+    }),
+    {
+      name: 'system-store',
+    }
+  )
+)

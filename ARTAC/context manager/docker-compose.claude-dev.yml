@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # Claude Code Development Container
+  claude-dev:
+    build:
+      context: ./claude-dev
+      dockerfile: Dockerfile
+    container_name: raisc-claude-dev
+    hostname: claude-dev
+    stdin_open: true
+    tty: true
+    environment:
+      # Development environment variables
+      - ENVIRONMENT=development
+      - DEBUG=true
+      # Database connection (to main postgres)
+      - DATABASE_URL=postgresql://raisc_user:raisc_password@postgres:5432/raisc_db
+      - REDIS_URL=redis://redis:6379
+      # API Keys (passed from host)
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      # Claude Code specific
+      - CLAUDE_CODE_PATH=claude
+      - PERSIST_CLAUDE_SESSIONS=true
+      - SAFE_RELOAD_MODE=true
+    volumes:
+      # Mount the entire project for development
+      - ./:/workspace/artac
+      # Mount Docker socket for Docker-in-Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist bash history
+      - claude_dev_history:/home/developer/.bash_history_volume
+      # Persist venv (to avoid reinstalling packages)
+      - claude_dev_venv:/home/developer/venv
+      # SSH keys (if needed)
+      - ~/.ssh:/home/developer/.ssh:ro
+    networks:
+      - raisc-network
+    # Keep container running
+    command: tail -f /dev/null
+    
+  # Dedicated PostgreSQL for Claude dev sessions
+  postgres-dev:
+    image: pgvector/pgvector:pg15
+    container_name: raisc-postgres-dev
+    environment:
+      POSTGRES_USER: raisc_user
+      POSTGRES_PASSWORD: raisc_password
+      POSTGRES_DB: raisc_dev_db
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - raisc-network
+
+  # Dedicated Redis for Claude dev sessions  
+  redis-dev:
+    image: redis:7-alpine
+    container_name: raisc-redis-dev
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - raisc-network
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  claude_dev_history:
+  claude_dev_venv:
+
+# Use the existing network from main docker-compose
+networks:
+  raisc-network:
+    external: true
