@@ -83,8 +83,8 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
       className="group"
     >
       <Card className={cn(
-        "bg-slate-800/30 border-slate-700/50 hover:bg-slate-800/50 transition-all duration-200",
-        "hover:border-artac-500/30"
+        "bg-muted/30 border-slate-700/50 hover:bg-muted/50 transition-all duration-200",
+        "hover:border-primary/30"
       )}>
         <div className="p-3 space-y-2">
           {/* Agent Header */}
@@ -103,7 +103,7 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
                     {agent.role}
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-400 truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   {agent.specialization.slice(0, 2).join(', ')}
                   {agent.specialization.length > 2 && '...'}
                 </p>
@@ -159,7 +159,7 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-1">
-                <Activity className="w-3 h-3 text-slate-400" />
+                <Activity className="w-3 h-3 text-muted-foreground" />
                 <span className={getPerformanceColor(status?.performance_score || agent.performance_score)}>
                   {Math.round(status?.performance_score || agent.performance_score)}%
                 </span>
@@ -167,15 +167,15 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
               
               {status?.active_tasks !== undefined && (
                 <div className="flex items-center space-x-1">
-                  <Code className="w-3 h-3 text-slate-400" />
-                  <span className="text-slate-300">
+                  <Code className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">
                     {status.active_tasks} tasks
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center space-x-1 text-slate-500">
+            <div className="flex items-center space-x-1 text-muted-foreground">
               <Clock className="w-3 h-3" />
               <span>{formatRelativeTime(agent.updated_at)}</span>
             </div>
@@ -189,7 +189,7 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
                   "w-1.5 h-1.5 rounded-full",
                   status.claude_session.active ? "bg-green-500 animate-pulse" : "bg-gray-500"
                 )} />
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-muted-foreground">
                   Claude Session: {status.claude_session.active ? 'Active' : 'Inactive'}
                 </span>
               </div>
@@ -212,22 +212,22 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
             >
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Model:</span>
-                  <span className="text-slate-300">{agent.model_name}</span>
+                  <span className="text-muted-foreground">Model:</span>
+                  <span className="text-muted-foreground">{agent.model_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Level:</span>
-                  <span className="text-slate-300 capitalize">{agent.level}</span>
+                  <span className="text-muted-foreground">Level:</span>
+                  <span className="text-muted-foreground capitalize">{agent.level}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Created:</span>
-                  <span className="text-slate-300">{formatRelativeTime(agent.created_at)}</span>
+                  <span className="text-muted-foreground">Created:</span>
+                  <span className="text-muted-foreground">{formatRelativeTime(agent.created_at)}</span>
                 </div>
               </div>
               
               {agent.specialization.length > 0 && (
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Specializations:</p>
+                  <p className="text-xs text-muted-foreground mb-1">Specializations:</p>
                   <div className="flex flex-wrap gap-1">
                     {agent.specialization.map((spec, index) => (
                       <Badge 
@@ -249,7 +249,7 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full h-6 text-xs text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="w-full h-6 text-xs text-muted-foreground hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
           >
             {isExpanded ? 'Less' : 'More'} Details
           </Button>

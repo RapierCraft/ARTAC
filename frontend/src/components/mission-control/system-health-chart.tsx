@@ -33,8 +33,8 @@ export function SystemHealthChart() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-lg">
-          <p className="text-slate-300 text-sm font-medium mb-2">{`Time: ${label}`}</p>
+        <div className="bg-muted border border-slate-600 rounded-lg p-3 shadow-lg">
+          <p className="text-muted-foreground text-sm font-medium mb-2">{`Time: ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {`${entry.name}: ${entry.value.toFixed(1)}${entry.name.includes('Usage') ? '%' : entry.name === 'System Health' ? '%' : ''}`}
@@ -50,7 +50,7 @@ export function SystemHealthChart() {
     <div className="space-y-6">
       {/* System Health Area Chart */}
       <div className="h-64">
-        <h4 className="text-sm font-medium text-slate-300 mb-3">System Health Over Time</h4>
+        <h4 className="text-sm font-medium text-muted-foreground mb-3">System Health Over Time</h4>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <defs>
@@ -89,7 +89,7 @@ export function SystemHealthChart() {
 
       {/* Resource Usage Multi-line Chart */}
       <div className="h-64">
-        <h4 className="text-sm font-medium text-slate-300 mb-3">Resource Usage</h4>
+        <h4 className="text-sm font-medium text-muted-foreground mb-3">Resource Usage</h4>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
@@ -130,7 +130,7 @@ export function SystemHealthChart() {
 
       {/* Agent & Task Activity */}
       <div className="h-48">
-        <h4 className="text-sm font-medium text-slate-300 mb-3">Activity Levels</h4>
+        <h4 className="text-sm font-medium text-muted-foreground mb-3">Activity Levels</h4>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
@@ -174,25 +174,25 @@ export function SystemHealthChart() {
           <div className="text-2xl font-bold text-green-400">
             {data[data.length - 1]?.systemHealth.toFixed(1)}%
           </div>
-          <div className="text-xs text-slate-400">System Health</div>
+          <div className="text-xs text-muted-foreground">System Health</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-blue-400">
+          <div className="text-2xl font-bold text-primary">
             {data[data.length - 1]?.cpuUsage.toFixed(1)}%
           </div>
-          <div className="text-xs text-slate-400">CPU Usage</div>
+          <div className="text-xs text-muted-foreground">CPU Usage</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-purple-400">
             {data[data.length - 1]?.memoryUsage.toFixed(1)}%
           </div>
-          <div className="text-xs text-slate-400">Memory Usage</div>
+          <div className="text-xs text-muted-foreground">Memory Usage</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-cyan-400">
             {systemStatus?.claude_sessions || 0}
           </div>
-          <div className="text-xs text-slate-400">Claude Sessions</div>
+          <div className="text-xs text-muted-foreground">Claude Sessions</div>
         </div>
       </div>
     </div>

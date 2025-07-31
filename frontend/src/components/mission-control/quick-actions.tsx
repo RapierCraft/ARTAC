@@ -11,7 +11,8 @@ import {
   UserPlus,
   FileText,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,10 +26,13 @@ import {
 } from '@/components/ui/dialog'
 import { useSystemStore } from '@/stores/system-store'
 import { useToast } from '@/hooks/use-toast'
+import { AnimatePresence } from 'framer-motion'
 
 export function QuickActions() {
   const [isCreateAgentOpen, setIsCreateAgentOpen] = useState(false)
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
+  const [systemOverviewExpanded, setSystemOverviewExpanded] = useState(false)
+  const [quickActionsExpanded, setQuickActionsExpanded] = useState(false)
   const { systemStatus, createAgent, assignTask } = useSystemStore()
   const { toast } = useToast()
 
@@ -82,8 +86,8 @@ export function QuickActions() {
     {
       icon: FileText,
       label: 'New Task',
-      color: 'text-blue-500 hover:text-blue-400',
-      bgColor: 'hover:bg-blue-500/10',
+      color: 'text-primary hover:text-primary',
+      bgColor: 'hover:bg-primary/10',
       action: () => setIsCreateTaskOpen(true),
     },
     {
@@ -118,92 +122,142 @@ export function QuickActions() {
 
   return (
     <div className="space-y-4">
-      {/* System Status Summary */}
+      {/* System Overview - Collapsible */}
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-white">System Overview</h3>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-            <span className="text-slate-400">Active</span>
-            <Badge variant="success" className="text-xs">
-              {systemStatus?.active_agents || 0}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-            <span className="text-slate-400">Busy</span>
-            <Badge variant="warning" className="text-xs">
-              {systemStatus?.busy_agents || 0}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-            <span className="text-slate-400">Tasks</span>
-            <Badge variant="outline" className="text-xs">
-              {systemStatus?.total_active_tasks || 0}
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
-            <span className="text-slate-400">Sessions</span>
-            <Badge variant="outline" className="text-xs">
-              {systemStatus?.claude_sessions || 0}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions Grid */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-white">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {quickActions.map((action, index) => {
-            const IconComponent = action.icon
-            return (
-              <motion.div
-                key={action.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Button
-                  variant="ghost"
-                  onClick={action.action}
-                  className={`w-full h-12 flex flex-col items-center justify-center space-y-1 ${action.color} ${action.bgColor} border border-transparent hover:border-current/20`}
-                >
-                  <IconComponent className="w-4 h-4" />
-                  <span className="text-xs">{action.label}</span>
-                </Button>
-              </motion.div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Performance Indicator */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-white">Performance</h3>
-        <div className="p-3 bg-slate-800/30 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-400">Overall Health</span>
-            <Badge variant="success" className="text-xs">98%</Badge>
-          </div>
-          <div className="w-full bg-slate-700/50 rounded-full h-1.5">
+        <Button
+          variant="ghost"
+          onClick={() => setSystemOverviewExpanded(!systemOverviewExpanded)}
+          className="w-full justify-between p-0 h-auto hover:bg-transparent"
+        >
+          <h3 className="text-sm font-medium text-foreground">System Overview</h3>
+          <motion.div
+            animate={{ rotate: systemOverviewExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </motion.div>
+        </Button>
+        
+        <AnimatePresence mode="wait">
+          {systemOverviewExpanded && (
             <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: '98%' }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 rounded-full"
-            />
-          </div>
-          <div className="mt-2 text-xs text-slate-500">
-            All systems operational
-          </div>
-        </div>
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                    <span className="text-muted-foreground">Active</span>
+                    <Badge variant="success" className="text-xs">
+                      {systemStatus?.active_agents || 0}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                    <span className="text-muted-foreground">Busy</span>
+                    <Badge variant="warning" className="text-xs">
+                      {systemStatus?.busy_agents || 0}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                    <span className="text-muted-foreground">Tasks</span>
+                    <Badge variant="outline" className="text-xs">
+                      {systemStatus?.total_active_tasks || 0}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                    <span className="text-muted-foreground">Sessions</span>
+                    <Badge variant="outline" className="text-xs">
+                      {systemStatus?.claude_sessions || 0}
+                    </Badge>
+                  </div>
+                </div>
+                
+                {/* Performance Indicator */}
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">Overall Health</span>
+                    <Badge variant="success" className="text-xs">98%</Badge>
+                  </div>
+                  <div className="w-full bg-muted/50 rounded-full h-1.5">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: "98%" }}
+                      transition={{ duration: 1, delay: 0.5 }}
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-1.5 rounded-full"
+                    />
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    All systems operational
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* Quick Actions - Collapsible */}
+      <div className="space-y-2">
+        <Button
+          variant="ghost"
+          onClick={() => setQuickActionsExpanded(!quickActionsExpanded)}
+          className="w-full justify-between p-0 h-auto hover:bg-transparent"
+        >
+          <h3 className="text-sm font-medium text-foreground">Quick Actions</h3>
+          <motion.div
+            animate={{ rotate: quickActionsExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </motion.div>
+        </Button>
+        
+        <AnimatePresence mode="wait">
+          {quickActionsExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {quickActions.map((action, index) => {
+                  const IconComponent = action.icon
+                  return (
+                    <motion.div
+                      key={action.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Button
+                        variant="ghost"
+                        onClick={action.action}
+                        className={`w-full h-12 flex flex-col items-center justify-center space-y-1 ${action.color} ${action.bgColor} border border-transparent hover:border-current/20`}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                        <span className="text-xs">{action.label}</span>
+                      </Button>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
 
       {/* Create Agent Dialog */}
       <Dialog open={isCreateAgentOpen} onOpenChange={setIsCreateAgentOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700">
+        <DialogContent className="bg-muted border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-white">Create New Agent</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               Deploy a new AI agent to your development team.
             </DialogDescription>
           </DialogHeader>
@@ -222,10 +276,10 @@ export function QuickActions() {
 
       {/* Create Task Dialog */}
       <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700">
+        <DialogContent className="bg-muted border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-white">Create New Task</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               Assign a new task to your AI development team.
             </DialogDescription>
           </DialogHeader>

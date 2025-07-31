@@ -99,9 +99,9 @@ export function AgentsMonitoring() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-white">Agent Monitoring</h1>
-            <p className="text-slate-400">Monitor and manage your AI development team</p>
+            <p className="text-muted-foreground">Monitor and manage your AI development team</p>
           </div>
-          <Button className="bg-artac-600 hover:bg-artac-700">
+          <Button className="bg-artac-600 hover:bg-accent">
             <Users className="w-4 h-4 mr-2" />
             Deploy New Agent
           </Button>
@@ -111,19 +111,19 @@ export function AgentsMonitoring() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search agents by name or role..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-800/50 border-slate-700 text-white"
+                className="pl-10 bg-muted/50 border-slate-700 text-white"
               />
             </div>
           </div>
           
           <div className="flex gap-2">
             <Select value={filterLevel} onValueChange={setFilterLevel}>
-              <SelectTrigger className="w-32 bg-slate-800/50 border-slate-700 text-white">
+              <SelectTrigger className="w-32 bg-muted/50 border-slate-700 text-white">
                 <SelectValue placeholder="Level" />
               </SelectTrigger>
               <SelectContent>
@@ -136,7 +136,7 @@ export function AgentsMonitoring() {
             </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-32 bg-slate-800/50 border-slate-700 text-white">
+              <SelectTrigger className="w-32 bg-muted/50 border-slate-700 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -149,7 +149,7 @@ export function AgentsMonitoring() {
             </Select>
 
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-36 bg-slate-800/50 border-slate-700 text-white">
+              <SelectTrigger className="w-36 bg-muted/50 border-slate-700 text-white">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -166,49 +166,49 @@ export function AgentsMonitoring() {
       {/* Summary Stats */}
       <div className="p-6 border-b border-slate-800/50">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-slate-800/30 border-slate-700/50">
+          <Card className="bg-muted/30 border-slate-700/50">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Users className="w-4 h-4 text-blue-500" />
+                <Users className="w-4 h-4 text-primary" />
                 <div>
                   <p className="text-2xl font-bold text-white">{stats.total}</p>
-                  <p className="text-xs text-slate-400">Total Agents</p>
+                  <p className="text-xs text-muted-foreground">Total Agents</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/30 border-slate-700/50">
+          <Card className="bg-muted/30 border-slate-700/50">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Activity className="w-4 h-4 text-green-500" />
                 <div>
                   <p className="text-2xl font-bold text-white">{stats.active}</p>
-                  <p className="text-xs text-slate-400">Active</p>
+                  <p className="text-xs text-muted-foreground">Active</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/30 border-slate-700/50">
+          <Card className="bg-muted/30 border-slate-700/50">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
                 <div>
                   <p className="text-2xl font-bold text-white">{stats.busy}</p>
-                  <p className="text-xs text-slate-400">Busy</p>
+                  <p className="text-xs text-muted-foreground">Busy</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800/30 border-slate-700/50">
+          <Card className="bg-muted/30 border-slate-700/50">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-purple-500" />
                 <div>
                   <p className="text-2xl font-bold text-white">{stats.avgPerformance.toFixed(1)}%</p>
-                  <p className="text-xs text-slate-400">Avg Performance</p>
+                  <p className="text-xs text-muted-foreground">Avg Performance</p>
                 </div>
               </div>
             </CardContent>
@@ -221,9 +221,9 @@ export function AgentsMonitoring() {
         <div className="p-6">
           {filteredAgents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Users className="w-12 h-12 text-slate-500 mb-4" />
-              <h3 className="text-lg font-medium text-slate-400 mb-2">No agents found</h3>
-              <p className="text-slate-500 text-center max-w-sm">
+              <Users className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">No agents found</h3>
+              <p className="text-muted-foreground text-center max-w-sm">
                 Try adjusting your search terms or filters to find the agents you're looking for.
               </p>
             </div>

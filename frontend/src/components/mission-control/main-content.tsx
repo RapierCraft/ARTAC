@@ -43,7 +43,7 @@ export function MainContent() {
   return (
     <div className="flex flex-col h-full">
       {/* Tab Navigation */}
-      <div className="border-b border-slate-800/50 bg-slate-900/30 backdrop-blur-sm">
+      <div className="border-b border-slate-800/50 bg-muted/30 backdrop-blur-sm">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="h-12 w-full justify-start rounded-none border-0 bg-transparent p-0">
             {tabs.map((tab) => (
@@ -52,10 +52,10 @@ export function MainContent() {
                 value={tab.id}
                 className={`
                   relative h-12 rounded-none border-b-2 border-transparent px-6 
-                  text-slate-400 transition-all duration-200
-                  data-[state=active]:border-artac-500 data-[state=active]:text-white
-                  data-[state=active]:bg-artac-500/10
-                  hover:text-white hover:bg-slate-800/50
+                  text-muted-foreground transition-all duration-200
+                  data-[state=active]:border-primary data-[state=active]:text-white
+                  data-[state=active]:bg-primary/10
+                  hover:text-white hover:bg-muted/50
                 `}
               >
                 {tab.label}
@@ -63,7 +63,7 @@ export function MainContent() {
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-artac-500"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}

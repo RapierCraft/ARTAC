@@ -29,7 +29,7 @@ export function LoadingScreen() {
   }, [])
 
   return (
-    <div className="flex min-h-screen items-center justify-center mission-control-bg">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center space-y-8">
         {/* ARTAC Logo */}
         <motion.div
@@ -40,7 +40,7 @@ export function LoadingScreen() {
         >
           <div className="relative">
             <div className="text-6xl font-bold gradient-text">ARTAC</div>
-            <div className="absolute -inset-1 bg-gradient-to-r from-artac-500 to-artac-700 rounded-lg blur opacity-25"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-25"></div>
           </div>
           <div className="text-lg text-muted-foreground">
             Agentic Runtime & Task Allocation Controller
@@ -74,7 +74,7 @@ export function LoadingScreen() {
                 strokeWidth="4"
                 fill="transparent"
                 strokeLinecap="round"
-                className="text-artac-500"
+                className="text-primary"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: (currentMessageIndex + 1) / loadingMessages.length }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
@@ -88,7 +88,7 @@ export function LoadingScreen() {
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-3 h-3 bg-artac-500 rounded-full"
+                className="w-3 h-3 bg-primary rounded-full"
               />
             </div>
           </div>
@@ -129,7 +129,7 @@ export function LoadingScreen() {
                 repeat: Infinity,
                 delay: i * 0.2,
               }}
-              className="w-3 h-3 bg-artac-500 rounded-full"
+              className="w-3 h-3 bg-primary rounded-full"
             />
           ))}
         </motion.div>

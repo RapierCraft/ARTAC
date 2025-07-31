@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Header } from './header'
 import { Sidebar } from './sidebar'
@@ -9,64 +9,101 @@ import { RightPanel } from './right-panel'
 import { cn } from '@/lib/utils'
 
 export function MissionControlLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  )
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(true) // Start with right panel collapsed
+  const [sidebarWidth, setSidebarWidth] = useState(320) // Increased default width
+
+  // Handle responsive sidebar on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarCollapsed(true)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   return (
-    <div className="h-screen bg-background text-foreground overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background to-muted/50" />
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5 dark:opacity-10" />
-      
-      {/* Main Layout */}
-      <div className="relative flex flex-col h-full">
-        {/* Header */}
-        <Header
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-          onToggleRightPanel={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-          sidebarCollapsed={sidebarCollapsed}
-          rightPanelCollapsed={rightPanelCollapsed}
-        />
+    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
+      {/* Header */}
+      <Header
+        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggleRightPanel={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+        sidebarCollapsed={sidebarCollapsed}
+        rightPanelCollapsed={rightPanelCollapsed}
+      />
 
-        {/* Main Content Area */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar */}
-          <motion.aside
-            initial={false}
-            animate={{
-              width: sidebarCollapsed ? 60 : 280,
-            }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className={cn(
-              'relative border-r border-border bg-card/50',
-              'backdrop-blur-sm',
-              sidebarCollapsed && 'overflow-hidden'
-            )}
-          >
-            <Sidebar collapsed={sidebarCollapsed} />
-          </motion.aside>
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        <motion.aside
+          initial={false}
+          animate={{
+            width: sidebarCollapsed ? 60 : sidebarWidth,
+          }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className={cn(
+            'flex-shrink-0 border-r border-border bg-card relative',
+            sidebarCollapsed && 'overflow-hidden'
+          )}
+        >
+          <Sidebar collapsed={sidebarCollapsed} />
+          
+          {/* Resize Handle */}
+          {!sidebarCollapsed && (
+            <div
+              className="absolute top-0 right-0 w-2 h-full cursor-col-resize bg-transparent hover:bg-primary/20 transition-colors group flex items-center justify-center"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                const startX = e.clientX
+                const startWidth = sidebarWidth
+                
+                const handleMouseMove = (e: MouseEvent) => {
+                  const newWidth = Math.max(280, Math.min(600, startWidth + (e.clientX - startX)))
+                  setSidebarWidth(newWidth)
+                }
+                
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                  document.body.style.cursor = ''
+                  document.body.style.userSelect = ''
+                }
+                
+                document.body.style.cursor = 'col-resize'
+                document.body.style.userSelect = 'none'
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+              }}
+            >
+              <div className="w-0.5 h-8 bg-border group-hover:bg-primary/50 rounded-full transition-colors" />
+            </div>
+          )}
+        </motion.aside>
 
-          {/* Main Content */}
-          <main className="flex-1 overflow-hidden">
-            <MainContent />
-          </main>
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto p-6">
+          <MainContent />
+        </main>
 
-          {/* Right Panel */}
-          <motion.aside
-            initial={false}
-            animate={{
-              width: rightPanelCollapsed ? 0 : 320,
-            }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className={cn(
-              'relative border-l border-slate-800/50 bg-slate-900/50',
-              'backdrop-blur-sm',
-              rightPanelCollapsed && 'overflow-hidden'
-            )}
-          >
-            {!rightPanelCollapsed && <RightPanel />}
-          </motion.aside>
-        </div>
+        {/* Right Panel */}
+        <motion.aside
+          initial={false}
+          animate={{
+            width: rightPanelCollapsed ? 0 : 320,
+          }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className={cn(
+            'flex-shrink-0 border-l border-border bg-card overflow-y-auto',
+            rightPanelCollapsed && 'overflow-hidden'
+          )}
+        >
+          {!rightPanelCollapsed && <RightPanel />}
+        </motion.aside>
       </div>
 
       {/* Global Notifications */}

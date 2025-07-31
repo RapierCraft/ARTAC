@@ -70,27 +70,27 @@ export function AgentPerformanceChart() {
     if (active && payload && payload.length && payload[0].payload.agents) {
       const data = payload[0].payload
       return (
-        <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 shadow-lg min-w-[200px]">
-          <p className="text-slate-300 text-sm font-semibold mb-2">{label} Level</p>
+        <div className="bg-muted border border-slate-600 rounded-lg p-4 shadow-lg min-w-[200px]">
+          <p className="text-muted-foreground text-sm font-semibold mb-2">{label} Level</p>
           <div className="space-y-1 text-xs">
-            <p className="text-slate-400">
+            <p className="text-muted-foreground">
               Average Performance: <span style={{ color: data.color }} className="font-medium">{data.avgPerformance.toFixed(1)}%</span>
             </p>
-            <p className="text-slate-400">
+            <p className="text-muted-foreground">
               Active Agents: <span className="text-green-400 font-medium">{data.activeAgents}</span> / {data.totalAgents}
             </p>
           </div>
           
           {data.agents.length > 0 && (
             <div className="mt-3 pt-2 border-t border-slate-600">
-              <p className="text-slate-400 text-xs mb-1">Top Performers:</p>
+              <p className="text-muted-foreground text-xs mb-1">Top Performers:</p>
               {data.agents
                 .sort((a: any, b: any) => b.currentPerformance - a.currentPerformance)
                 .slice(0, 3)
                 .map((agent: any, index: number) => (
                   <div key={agent.id} className="flex justify-between text-xs">
-                    <span className="text-slate-300 truncate">{agent.name}</span>
-                    <span className="text-slate-400 ml-2">{agent.currentPerformance.toFixed(1)}%</span>
+                    <span className="text-muted-foreground truncate">{agent.name}</span>
+                    <span className="text-muted-foreground ml-2">{agent.currentPerformance.toFixed(1)}%</span>
                   </div>
                 ))}
             </div>
@@ -142,7 +142,7 @@ export function AgentPerformanceChart() {
         {chartData.map((levelData) => (
           <div 
             key={levelData.level}
-            className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50"
+            className="bg-muted/30 rounded-lg p-4 border border-slate-700/50"
           >
             <div className="flex items-center space-x-2 mb-3">
               <div 
@@ -154,7 +154,7 @@ export function AgentPerformanceChart() {
             
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Performance</span>
+                <span className="text-xs text-muted-foreground">Performance</span>
                 <span 
                   className="text-sm font-semibold"
                   style={{ color: levelData.color }}
@@ -164,14 +164,14 @@ export function AgentPerformanceChart() {
               </div>
               
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Active</span>
-                <span className="text-sm text-slate-300">
+                <span className="text-xs text-muted-foreground">Active</span>
+                <span className="text-sm text-muted-foreground">
                   {levelData.activeAgents}/{levelData.totalAgents}
                 </span>
               </div>
               
               {/* Performance bar */}
-              <div className="w-full bg-slate-700/50 rounded-full h-1.5 mt-2">
+              <div className="w-full bg-muted/50 rounded-full h-1.5 mt-2">
                 <div
                   className="h-1.5 rounded-full transition-all duration-1000"
                   style={{
@@ -187,7 +187,7 @@ export function AgentPerformanceChart() {
 
       {/* Performance Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-700/50">
-        <div className="bg-slate-800/30 rounded-lg p-4">
+        <div className="bg-muted/30 rounded-lg p-4">
           <h4 className="text-sm font-medium text-white mb-2">Highest Performing</h4>
           <div className="space-y-1">
             {agents
@@ -199,14 +199,14 @@ export function AgentPerformanceChart() {
               .slice(0, 3)
               .map((agent, index) => (
                 <div key={agent.id} className="flex justify-between text-xs">
-                  <span className="text-slate-300 truncate">{agent.name}</span>
+                  <span className="text-muted-foreground truncate">{agent.name}</span>
                   <span className="text-green-400 ml-2">{agent.currentPerformance.toFixed(1)}%</span>
                 </div>
               ))}
           </div>
         </div>
 
-        <div className="bg-slate-800/30 rounded-lg p-4">
+        <div className="bg-muted/30 rounded-lg p-4">
           <h4 className="text-sm font-medium text-white mb-2">Needs Attention</h4>
           <div className="space-y-1">
             {agents
@@ -219,35 +219,35 @@ export function AgentPerformanceChart() {
               .slice(0, 3)
               .map((agent, index) => (
                 <div key={agent.id} className="flex justify-between text-xs">
-                  <span className="text-slate-300 truncate">{agent.name}</span>
+                  <span className="text-muted-foreground truncate">{agent.name}</span>
                   <span className="text-yellow-400 ml-2">{agent.currentPerformance.toFixed(1)}%</span>
                 </div>
               ))}
           </div>
           {agents.filter(agent => (agentStatuses[agent.id]?.performance_score || agent.performance_score) < 70).length === 0 && (
-            <p className="text-xs text-slate-500">All agents performing well</p>
+            <p className="text-xs text-muted-foreground">All agents performing well</p>
           )}
         </div>
 
-        <div className="bg-slate-800/30 rounded-lg p-4">
+        <div className="bg-muted/30 rounded-lg p-4">
           <h4 className="text-sm font-medium text-white mb-2">Overall Health</h4>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-slate-400">Average Performance</span>
-              <span className="text-slate-300">
+              <span className="text-muted-foreground">Average Performance</span>
+              <span className="text-muted-foreground">
                 {agents.length > 0 
                   ? (agents.reduce((sum, agent) => sum + (agentStatuses[agent.id]?.performance_score || agent.performance_score), 0) / agents.length).toFixed(1)
                   : 0}%
               </span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-slate-400">Active Agents</span>
+              <span className="text-muted-foreground">Active Agents</span>
               <span className="text-green-400">
                 {Object.values(agentStatuses).filter(status => status.status === 'active').length}
               </span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-slate-400">Performance Trend</span>
+              <span className="text-muted-foreground">Performance Trend</span>
               <span className="text-green-400">↗ +2.3%</span>
             </div>
           </div>

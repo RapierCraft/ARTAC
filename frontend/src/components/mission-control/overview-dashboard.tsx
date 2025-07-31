@@ -82,7 +82,7 @@ export function OverviewDashboard() {
         <motion.div variants={itemVariants} className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">Mission Control Overview</h1>
-            <p className="text-slate-400">Real-time system monitoring and analytics</p>
+            <p className="text-muted-foreground">Real-time system monitoring and analytics</p>
           </div>
           <div className="flex items-center space-x-3">
             <Badge 
@@ -93,7 +93,7 @@ export function OverviewDashboard() {
             </Badge>
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-slate-400">Live</span>
+              <span className="text-sm text-muted-foreground">Live</span>
             </div>
           </div>
         </motion.div>
@@ -106,7 +106,7 @@ export function OverviewDashboard() {
             total={metrics.totalAgents}
             icon={Users}
             trend={+5}
-            color="text-blue-500"
+            color="text-primary"
           />
           <MetricCard
             title="Active Tasks"
@@ -135,10 +135,10 @@ export function OverviewDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* System Health Chart */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
-            <Card className="bg-slate-800/50 border-slate-700/50 h-full">
+            <Card className="bg-muted/50 border-slate-700/50 h-full">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
-                  <Activity className="w-5 h-5 text-artac-500" />
+                  <Activity className="w-5 h-5 text-primary" />
                   <span>System Health</span>
                 </CardTitle>
                 <CardDescription>Real-time system performance metrics</CardDescription>
@@ -151,10 +151,10 @@ export function OverviewDashboard() {
 
           {/* Agent Status Summary */}
           <motion.div variants={itemVariants}>
-            <Card className="bg-slate-800/50 border-slate-700/50 h-full">
+            <Card className="bg-muted/50 border-slate-700/50 h-full">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
-                  <Users className="w-5 h-5 text-blue-500" />
+                  <Users className="w-5 h-5 text-primary" />
                   <span>Agent Status</span>
                 </CardTitle>
               </CardHeader>
@@ -168,7 +168,7 @@ export function OverviewDashboard() {
                   
                   const levelColors = {
                     executive: 'text-yellow-500',
-                    management: 'text-blue-500',
+                    management: 'text-primary',
                     development: 'text-green-500',
                     execution: 'text-purple-500',
                   }
@@ -179,7 +179,7 @@ export function OverviewDashboard() {
                         <span className={`text-sm font-medium capitalize ${levelColors[level as keyof typeof levelColors]}`}>
                           {level}
                         </span>
-                        <span className="text-sm text-slate-400">
+                        <span className="text-sm text-muted-foreground">
                           {activeLevelAgents}/{levelAgents.length}
                         </span>
                       </div>
@@ -196,7 +196,7 @@ export function OverviewDashboard() {
 
           {/* Agent Performance Chart */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
-            <Card className="bg-slate-800/50 border-slate-700/50 h-full">
+            <Card className="bg-muted/50 border-slate-700/50 h-full">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
                   <Brain className="w-5 h-5 text-purple-500" />
@@ -212,7 +212,7 @@ export function OverviewDashboard() {
 
           {/* Recent Activity */}
           <motion.div variants={itemVariants}>
-            <Card className="bg-slate-800/50 border-slate-700/50 h-full">
+            <Card className="bg-muted/50 border-slate-700/50 h-full">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
                   <Clock className="w-5 h-5 text-orange-500" />
@@ -228,7 +228,7 @@ export function OverviewDashboard() {
 
         {/* System Alerts */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-slate-800/50 border-slate-700/50">
+          <Card className="bg-muted/50 border-slate-700/50">
             <CardHeader>
               <CardTitle className="text-white flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-yellow-500" />

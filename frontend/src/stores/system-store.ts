@@ -46,13 +46,23 @@ export const useSystemStore = create<SystemStore>()(
         set({ isLoading: true, error: null })
         
         try {
-          // Try to connect to backend
+          // Try to connect to backend with proper error handling
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 5000)
+          
           const response = await fetch(getApiUrl('/health'), { 
-            signal: AbortSignal.timeout(5000) // 5 second timeout
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'omit'
+          }).catch((err) => {
+            clearTimeout(timeoutId)
+            throw new Error(`Network error: ${err.message}`)
           })
           
+          clearTimeout(timeoutId)
+          
           if (!response.ok) {
-            throw new Error('Backend not available')
+            throw new Error(`Backend responded with status: ${response.status}`)
           }
 
           // Backend is available - fetch real data
@@ -65,8 +75,7 @@ export const useSystemStore = create<SystemStore>()(
 
           set({ isInitialized: true, isLoading: false, isOfflineMode: false })
         } catch (error) {
-          console.warn('Backend unavailable, using mock data:', error)
-          
+          // Backend unavailable - this is expected when backend isn't running
           // Use mock data for offline mode
           const mockData = getMockData()
           const agentStatuses: Record<string, AgentStatus> = {}
@@ -104,8 +113,8 @@ export const useSystemStore = create<SystemStore>()(
           const systemStatus = await response.json()
           set({ systemStatus })
         } catch (error) {
-          console.error('Failed to fetch system status:', error)
-          set({ error: 'Failed to fetch system status' })
+          // Silently handle - app is in offline mode
+          set({ error: null })
         }
       },
 

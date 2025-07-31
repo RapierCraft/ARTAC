@@ -73,13 +73,13 @@ export function SystemStatusIndicator() {
 
       {/* System Metrics */}
       {systemStatus && isInitialized && (
-        <div className="hidden lg:flex items-center space-x-4 text-xs text-slate-400">
+        <div className="hidden lg:flex items-center space-x-4 text-xs text-muted-foreground">
           <div className="flex items-center space-x-1">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span>{systemStatus.active_agents}/{systemStatus.total_agents} Agents</span>
           </div>
           <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <div className="w-2 h-2 rounded-full bg-primary" />
             <span>{systemStatus.claude_sessions} Sessions</span>
           </div>
           <div className="flex items-center space-x-1">

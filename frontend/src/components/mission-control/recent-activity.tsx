@@ -88,8 +88,8 @@ export function RecentActivity() {
           timestamp: agent.created_at,
           agent: agent.name,
           icon: User,
-          color: 'text-blue-500',
-          bgColor: 'bg-blue-500/10'
+          color: 'text-primary',
+          bgColor: 'bg-primary/10'
         })
       })
 
@@ -130,8 +130,8 @@ export function RecentActivity() {
     <div className="space-y-3">
       {activityItems.length === 0 ? (
         <div className="text-center py-6">
-          <Clock className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">No recent activity</p>
+          <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No recent activity</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
@@ -145,7 +145,7 @@ export function RecentActivity() {
                 transition={{ delay: index * 0.05 }}
                 className={cn(
                   "flex items-start space-x-3 p-3 rounded-lg border transition-all duration-200",
-                  "hover:bg-slate-800/30 border-slate-700/50",
+                  "hover:bg-muted/30 border-slate-700/50",
                   item.bgColor
                 )}
               >
@@ -158,12 +158,12 @@ export function RecentActivity() {
                     <h4 className="text-sm font-medium text-white truncate">
                       {item.title}
                     </h4>
-                    <span className="text-xs text-slate-500 whitespace-nowrap ml-2">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                       {formatRelativeTime(item.timestamp)}
                     </span>
                   </div>
                   
-                  <p className="text-xs text-slate-400 truncate mb-1">
+                  <p className="text-xs text-muted-foreground truncate mb-1">
                     {item.description}
                   </p>
                   
@@ -185,7 +185,7 @@ export function RecentActivity() {
       <div className="pt-3 border-t border-slate-700/50">
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400">Completed Today</span>
+            <span className="text-muted-foreground">Completed Today</span>
             <span className="text-green-400 font-medium">
               {tasks.filter(task => {
                 if (task.status !== 'completed' || !task.completed_at) return false
@@ -197,7 +197,7 @@ export function RecentActivity() {
           </div>
           
           <div className="flex items-center justify-between">
-            <span className="text-slate-400">Failed Today</span>
+            <span className="text-muted-foreground">Failed Today</span>
             <span className="text-red-400 font-medium">
               {tasks.filter(task => {
                 if (task.status !== 'failed') return false
@@ -215,7 +215,7 @@ export function RecentActivity() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full text-xs text-slate-400 hover:text-slate-300 py-2 border border-slate-700/50 rounded-md hover:bg-slate-800/30 transition-all duration-200"
+          className="w-full text-xs text-muted-foreground hover:text-muted-foreground py-2 border border-slate-700/50 rounded-md hover:bg-muted/30 transition-all duration-200"
         >
           View All Activity
         </motion.button>

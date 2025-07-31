@@ -33,7 +33,7 @@ export function MetricCard({
       whileHover={{ scale: 1.02 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
-      <Card className="bg-slate-800/50 border-slate-700/50 hover:bg-slate-800/70 transition-all duration-200">
+      <Card className="bg-muted/50 border-slate-700/50 hover:bg-muted/70 transition-all duration-200">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className={cn("p-2 rounded-lg bg-black/20", color.replace('text-', 'bg-').replace('-500', '-500/20'))}>
@@ -56,25 +56,25 @@ export function MetricCard({
                 {typeof value === 'number' ? value.toLocaleString() : value}
               </span>
               {total && (
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-muted-foreground">
                   / {total.toLocaleString()}
                 </span>
               )}
             </div>
             
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-slate-400">
+              <h3 className="text-sm font-medium text-muted-foreground">
                 {title}
               </h3>
               {total && (
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-muted-foreground">
                   {((Number(value) / total) * 100).toFixed(1)}%
                 </div>
               )}
             </div>
             
             {description && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {description}
               </p>
             )}
@@ -83,14 +83,14 @@ export function MetricCard({
           {/* Progress bar for cards with totals */}
           {total && (
             <div className="mt-3">
-              <div className="w-full bg-slate-700/50 rounded-full h-1">
+              <div className="w-full bg-muted/50 rounded-full h-1">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(Number(value) / total) * 100}%` }}
                   transition={{ duration: 1, delay: 0.2 }}
                   className={cn(
                     "h-1 rounded-full",
-                    color.includes('blue') && "bg-blue-500",
+                    color.includes('blue') && "bg-primary",
                     color.includes('green') && "bg-green-500", 
                     color.includes('emerald') && "bg-emerald-500",
                     color.includes('purple') && "bg-purple-500",

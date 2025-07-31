@@ -12,7 +12,8 @@ import {
   Power,
   Activity,
   Shield,
-  Zap
+  Zap,
+  RefreshCcw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -58,7 +59,7 @@ export function Header({
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-artac-500 to-artac-700"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent"
             >
               <Zap className="h-4 w-4 text-white" />
             </motion.div>
@@ -98,7 +99,7 @@ export function Header({
                 <span className="text-muted-foreground">agents</span>
               </div>
               <div className="flex items-center space-x-1">
-                <Shield className="h-4 w-4 text-blue-500" />
+                <Shield className="h-4 w-4 text-primary" />
                 <span className="text-foreground">{systemStatus.total_active_tasks}</span>
                 <span className="text-muted-foreground">tasks</span>
               </div>
@@ -109,15 +110,23 @@ export function Header({
           <Button
             variant="ghost"
             size="sm"
-            className="relative text-slate-400 hover:text-white"
+            className="relative text-muted-foreground hover:text-foreground flex items-center gap-2"
           >
-            <Bell className="h-5 w-5" />
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs"
-            >
-              3
-            </Badge>
+            <Bell className="h-4 w-4" />
+            <div className="flex items-center gap-1">
+              <div className="h-1.5 w-1.5 bg-destructive rounded-full" />
+              <span className="text-xs">3</span>
+            </div>
+          </Button>
+
+          {/* Refresh Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.location.reload()}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCcw className="h-4 w-4" />
           </Button>
 
           {/* Theme Toggle */}
@@ -158,7 +167,7 @@ export function Header({
       </div>
 
       {/* Header Glow Effect */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-artac-500/50 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
     </header>
   )
 }

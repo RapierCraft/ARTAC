@@ -150,7 +150,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
             "relative h-12 w-12 rounded-full transition-all duration-300",
             isActive
               ? "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25"
-              : "bg-artac-600 hover:bg-artac-700 text-white shadow-lg shadow-artac-500/25"
+              : "bg-artac-600 hover:bg-accent text-white shadow-lg shadow-primary/25"
           )}
         >
           {isActive ? (
@@ -214,7 +214,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
                   delay: i * 0.1,
                   ease: "easeInOut",
                 }}
-                className="w-1 bg-artac-500 rounded-full"
+                className="w-1 bg-primary rounded-full"
                 style={{ height: Math.max(8, (audioLevel * 20) / 100) }}
               />
             ))}
@@ -250,8 +250,8 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
               exit={{ opacity: 0, y: -10 }}
               className="max-w-md"
             >
-              <Card className="bg-slate-800/50 border-slate-700 p-3">
-                <p className="text-sm text-slate-300 text-center">
+              <Card className="bg-muted/50 border-slate-700 p-3">
+                <p className="text-sm text-muted-foreground text-center">
                   "{transcript}"
                 </p>
               </Card>
@@ -264,7 +264,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-xs text-slate-500 text-center max-w-xs"
+            className="text-xs text-muted-foreground text-center max-w-xs"
           >
             Say commands like "Show agent status" or "Create new task"
           </motion.p>

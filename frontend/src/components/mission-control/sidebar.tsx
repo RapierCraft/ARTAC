@@ -15,7 +15,8 @@ import {
   Pause,
   Settings,
   Search,
-  Filter
+  Filter,
+  Activity
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +39,7 @@ const AGENT_LEVEL_ICONS = {
 
 const AGENT_LEVEL_COLORS = {
   executive: 'text-yellow-500',
-  management: 'text-blue-500', 
+  management: 'text-primary', 
   development: 'text-green-500',
   execution: 'text-purple-500',
 }
@@ -48,6 +49,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
     new Set(['executive', 'management'])
   )
   const [searchTerm, setSearchTerm] = useState('')
+  const [systemOverviewExpanded, setSystemOverviewExpanded] = useState(false)
   const [filterLevel, setFilterLevel] = useState<string | null>(null)
   
   const { agents, agentStatuses, systemStatus } = useSystemStore()
@@ -122,7 +124,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-8 h-8 bg-gradient-to-r from-artac-500 to-artac-700 rounded-full flex items-center justify-center"
+            className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center"
           >
             <Crown className="w-4 h-4 text-white" />
           </motion.div>
@@ -142,7 +144,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 size="sm"
                 className={cn(
                   "w-full h-10 p-0 justify-center relative",
-                  "hover:bg-slate-800/50"
+                  "hover:bg-muted/50"
                 )}
                 onClick={() => toggleLevel(level)}
               >
@@ -169,7 +171,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full h-10 p-0 justify-center text-blue-500 hover:bg-blue-500/10"
+            className="w-full h-10 p-0 justify-center text-primary hover:bg-primary/10"
           >
             <Play className="w-4 h-4" />
           </Button>
@@ -179,20 +181,20 @@ export function Sidebar({ collapsed }: SidebarProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800/50">
+      <div className="p-4 border-b border-border flex-shrink-0">
         <div className="flex items-center space-x-3">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-8 h-8 bg-gradient-to-r from-artac-500 to-artac-700 rounded-full flex items-center justify-center"
+            className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-full flex items-center justify-center"
           >
             <Crown className="w-4 h-4 text-white" />
           </motion.div>
           <div>
             <h2 className="text-lg font-semibold text-white">Agent Hierarchy</h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               {systemStatus?.total_agents || 0} total agents
             </p>
           </div>
@@ -200,26 +202,26 @@ export function Sidebar({ collapsed }: SidebarProps) {
       </div>
 
       {/* Search and Filters */}
-      <div className="p-4 space-y-3 border-b border-slate-800/50">
+      <div className="p-4 space-y-3 border-b border-border flex-shrink-0">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search agents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-md text-sm text-white placeholder-slate-400 focus:outline-none focus:border-artac-500"
+            className="w-full pl-10 pr-4 py-2 bg-muted/50 border border-border rounded-md text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
           />
         </div>
 
         {/* Level Filter */}
-        <div className="flex space-x-1">
+        <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-thin">
           <Button
             variant={filterLevel === null ? "default" : "ghost"}
             size="sm"
             onClick={() => setFilterLevel(null)}
-            className="text-xs"
+            className="text-xs flex-shrink-0"
           >
             All
           </Button>
@@ -229,7 +231,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
               variant={filterLevel === level ? "default" : "ghost"}
               size="sm"
               onClick={() => setFilterLevel(filterLevel === level ? null : level)}
-              className="text-xs capitalize"
+              className="text-xs capitalize flex-shrink-0"
             >
               {level}
             </Button>
@@ -238,8 +240,8 @@ export function Sidebar({ collapsed }: SidebarProps) {
       </div>
 
       {/* Agent Hierarchy */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="p-2 space-y-1">
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+        <div className="p-2 space-y-1 pb-6">
           {Object.keys(AGENT_LEVEL_ICONS).map((level) => {
             const IconComponent = AGENT_LEVEL_ICONS[level as keyof typeof AGENT_LEVEL_ICONS]
             const color = AGENT_LEVEL_COLORS[level as keyof typeof AGENT_LEVEL_COLORS]
@@ -255,13 +257,13 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   onClick={() => toggleLevel(level)}
-                  className="w-full justify-start h-10 px-3 hover:bg-slate-800/50"
+                  className="w-full justify-start h-10 px-3 hover:bg-muted/50"
                 >
                   <motion.div
                     animate={{ rotate: isExpanded ? 90 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </motion.div>
                   <IconComponent className={cn("w-4 h-4 ml-2", color)} />
                   <span className="ml-2 font-medium capitalize text-white">
@@ -285,7 +287,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
                 </Button>
 
                 {/* Level Agents */}
-                <AnimatePresence>
+                <AnimatePresence mode="wait">
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
@@ -312,8 +314,9 @@ export function Sidebar({ collapsed }: SidebarProps) {
         </div>
       </div>
 
+
       {/* Quick Actions */}
-      <div className="p-4 border-t border-slate-800/50">
+      <div className="p-4 border-t border-border flex-shrink-0">
         <QuickActions />
       </div>
     </div>
