@@ -92,4 +92,4 @@ chroma_db/
 !README.md
 *.sh
 *.yml
-*.yaml
+*.yaml# Repository cleaned of incorrect attributions
