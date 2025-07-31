@@ -1,4 +1,4 @@
-# ARTAC Minimal - Core only, no heavy AI packages
+# ARTAC Complete Install - All services
 fastapi
 uvicorn[standard]
 pydantic
@@ -18,3 +18,12 @@ redis[hiredis]
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+
+# AI Services
+openai-whisper
+elevenlabs
+pydub
+numpy
+
+# Ollama client
+ollama

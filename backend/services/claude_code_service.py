@@ -103,8 +103,8 @@ class ClaudeCodeSession:
         timeout = timeout or settings.CLAUDE_CODE_TIMEOUT
         
         try:
-            # Send command to Claude Code
-            self.process.stdin.write(f"{command}\n")
+            # Send command to Claude Code (encode string to bytes)
+            self.process.stdin.write(f"{command}\n".encode('utf-8'))
             await self.process.stdin.drain()
             
             # Read response with timeout
@@ -125,7 +125,8 @@ class ClaudeCodeSession:
                         
                         # Check if we have a complete response
                         # (Claude Code typically ends responses with specific markers)
-                        if line.strip().endswith("```") or "Done." in line:
+                        line_str = line.decode('utf-8') if isinstance(line, bytes) else line
+                        if line_str.strip().endswith("```") or "Done." in line_str:
                             break
                             
                     except asyncio.TimeoutError:
@@ -156,8 +157,8 @@ class ClaudeCodeSession:
                     "timeout": timeout
                 }
             
-            stdout_text = "".join(stdout_data)
-            stderr_text = "".join(stderr_data)
+            stdout_text = b"".join(stdout_data).decode('utf-8')
+            stderr_text = b"".join(stderr_data).decode('utf-8')
             
             result = {
                 "success": True,
@@ -211,7 +212,7 @@ class ClaudeCodeSession:
                 
                 # Graceful shutdown
                 if self.process.stdin and not self.process.stdin.is_closing():
-                    self.process.stdin.write("exit\n")
+                    self.process.stdin.write("exit\n".encode('utf-8'))
                     await self.process.stdin.drain()
                     self.process.stdin.close()
                 
@@ -242,8 +243,9 @@ class ClaudeCodeService:
         self._check_claude_availability()
     
     def _check_claude_availability(self):
-        """Check if Claude Code CLI is available"""
+        """Check if Claude Code CLI is available and handle authentication"""
         try:
+            # First check if Claude CLI is installed
             result = subprocess.run(
                 [settings.CLAUDE_CODE_PATH, "--version"],
                 capture_output=True,
@@ -255,12 +257,61 @@ class ClaudeCodeService:
                     "version": result.stdout.strip(),
                     "path": settings.CLAUDE_CODE_PATH
                 })
+                
+                # Check authentication status and provide auth URL if needed
+                auth_result = subprocess.run(
+                    [settings.CLAUDE_CODE_PATH, "doctor"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    input="\n",  # Send enter to skip interactive prompts
+                )
+                
+                if auth_result.returncode != 0 or "not authenticated" in auth_result.stdout.lower():
+                    # Try to get authentication URL
+                    try:
+                        auth_url_result = subprocess.run(
+                            [settings.CLAUDE_CODE_PATH, "setup-token"],
+                            capture_output=True,
+                            text=True,
+                            timeout=60,
+                            input="\n",  # Send enter to get URL
+                        )
+                        
+                        # Extract URL from output
+                        auth_url = None
+                        for line in auth_url_result.stdout.split('\n'):
+                            if 'https://' in line and ('claude.ai' in line or 'anthropic.com' in line):
+                                auth_url = line.strip()
+                                break
+                        
+                        if auth_url:
+                            logger.log_system_event("claude_code_auth_url_available", {
+                                "message": f"Claude CLI authentication required. Please visit: {auth_url}",
+                                "auth_url": auth_url
+                            })
+                        else:
+                            logger.log_system_event("claude_code_auth_needed", {
+                                "message": "Claude Code CLI requires authentication. Please run 'docker exec -it artac-backend claude setup-token' to get auth URL."
+                            })
+                            
+                    except Exception as e:
+                        logger.log_system_event("claude_code_auth_setup_failed", {
+                            "message": f"Failed to get authentication URL: {e}. Please run 'docker exec -it artac-backend claude setup-token' manually."
+                        })
+                else:
+                    logger.log_system_event("claude_code_authenticated", {
+                        "message": "Claude Code CLI is properly authenticated"
+                    })
             else:
                 raise RuntimeError(f"Claude Code returned non-zero exit code: {result.returncode}")
                 
         except Exception as e:
             logger.log_error(e, {"action": "check_claude_availability"})
-            raise RuntimeError(f"Claude Code CLI not available at {settings.CLAUDE_CODE_PATH}: {e}")
+            # Don't raise error - allow service to start but log that auth may be needed
+            logger.log_system_event("claude_code_auth_warning", {
+                "message": f"Claude Code CLI available but authentication status unclear: {e}"
+            })
     
     async def get_or_create_session(self, agent_id: str, working_directory: str = None) -> ClaudeCodeSession:
         """Get existing session or create new one for agent"""
@@ -354,8 +405,8 @@ class ClaudeCodeService:
                 
                 return {
                     "success": process.returncode == 0,
-                    "stdout": stdout,
-                    "stderr": stderr,
+                    "stdout": stdout.decode('utf-8') if isinstance(stdout, bytes) else stdout,
+                    "stderr": stderr.decode('utf-8') if isinstance(stderr, bytes) else stderr,
                     "return_code": process.returncode,
                     "command": command,
                     "working_directory": working_dir
@@ -397,3 +448,77 @@ class ClaudeCodeService:
             agent_id: self.get_session_status(agent_id)
             for agent_id in self.active_sessions
         }
+    
+    async def setup_authentication_token(self, token: str) -> Dict[str, Any]:
+        """Setup Claude CLI authentication with provided token"""
+        try:
+            # Use the setup-token command with the provided token
+            result = subprocess.run(
+                [settings.CLAUDE_CODE_PATH, "setup-token"],
+                input=f"{token}\n",
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                logger.log_system_event("claude_code_auth_success", {
+                    "message": "Claude CLI authentication successful"
+                })
+                return {
+                    "success": True,
+                    "message": "Authentication successful"
+                }
+            else:
+                logger.log_system_event("claude_code_auth_failed", {
+                    "message": f"Authentication failed: {result.stderr}"
+                })
+                return {
+                    "success": False,
+                    "error": result.stderr or "Authentication failed"
+                }
+                
+        except Exception as e:
+            logger.log_error(e, {"action": "setup_authentication_token"})
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def get_authentication_url(self) -> Dict[str, Any]:
+        """Get authentication URL for Claude CLI setup"""
+        try:
+            result = subprocess.run(
+                [settings.CLAUDE_CODE_PATH, "setup-token"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                input="\n"
+            )
+            
+            # Extract URL from output
+            auth_url = None
+            for line in result.stdout.split('\n'):
+                if 'https://' in line and ('claude.ai' in line or 'anthropic.com' in line):
+                    auth_url = line.strip()
+                    break
+            
+            if auth_url:
+                return {
+                    "success": True,
+                    "auth_url": auth_url,
+                    "message": "Please visit the URL to authenticate"
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Could not extract authentication URL",
+                    "output": result.stdout
+                }
+                
+        except Exception as e:
+            logger.log_error(e, {"action": "get_authentication_url"})
+            return {
+                "success": False,
+                "error": str(e)
+            }

@@ -39,9 +39,13 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: Optional[str] = None
     
     # AI Services - Claude Code CLI Integration
-    CLAUDE_CODE_PATH: str = "claude"  # Path to claude command
+    CLAUDE_CODE_PATH: str = "claude"  # Path to claude command (installed globally in container)
+    # ANTHROPIC_API_KEY removed to allow OAuth authentication for Max plan
     OPENAI_API_KEY: Optional[str] = None
     ELEVENLABS_API_KEY: Optional[str] = None
+    
+    # Ollama Configuration
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
     
     # Voice Interface Configuration
     DEFAULT_VOICE_EMOTION: str = "neutral"

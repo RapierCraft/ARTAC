@@ -3,7 +3,13 @@ Whisper Speech-to-Text Service
 Local speech recognition using OpenAI Whisper
 """
 
-import whisper
+try:
+    import whisper
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    whisper = None
+
 import tempfile
 import os
 import asyncio
@@ -26,6 +32,10 @@ class WhisperService:
     
     async def initialize(self) -> bool:
         """Initialize Whisper model"""
+        if not WHISPER_AVAILABLE:
+            logger.log_system_event("whisper_unavailable", {"reason": "whisper package not installed"})
+            return False
+            
         try:
             logger.log_system_event("whisper_initializing", {"model": self.model_name})
             

@@ -41,17 +41,14 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
         
         if (status.whisper_service_initialized) {
           setWhisperAvailable(true)
-          setLastResponse('🎧 Whisper STT ready - Click voice button to start recording!')
           console.log('Whisper STT available:', status)
         } else {
           setWhisperAvailable(false)
-          setLastResponse('⚠️ Whisper STT not available - check backend service')
           console.log('Whisper STT not available:', status)
         }
       } catch (error) {
         console.error('Failed to check Whisper availability:', error)
         setWhisperAvailable(false)
-        setLastResponse('❌ Cannot connect to Whisper STT service - check backend connection')
       }
     }
     
@@ -347,7 +344,7 @@ Click the voice button to start recording!`)
         </Button>
 
         {/* Pulse Animation */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {isListening && (
             <motion.div
               key="pulse"
@@ -361,7 +358,7 @@ Click the voice button to start recording!`)
         </AnimatePresence>
 
         {/* Processing Indicator */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {isProcessing && (
             <motion.div
               key="processing"
@@ -381,7 +378,7 @@ Click the voice button to start recording!`)
       </div>
 
       {/* Audio Visualizer */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {isListening && (
           <motion.div
             key="visualizer"
@@ -431,7 +428,7 @@ Click the voice button to start recording!`)
         </Badge>
 
         {/* Transcript Display */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {transcript && (
             <motion.div
               key="transcript"
@@ -486,60 +483,6 @@ Click the voice button to start recording!`)
         )}
       </div>
 
-      {/* AI Response Section */}
-      <AnimatePresence mode="wait">
-        {lastResponse && (
-          <motion.div
-            key="response"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-md"
-          >
-            <Card className="bg-muted/30 border-slate-700 p-4">
-              <div className="flex items-start justify-between mb-3">
-                <Badge variant="secondary" className="bg-artac-600 text-white">
-                  {conversationMode === 'ceo' && 'CEO Response'}
-                  {conversationMode === 'team-meeting' && 'Team Meeting'}
-                  {conversationMode === 'task-assignment' && 'Task Assigned'}
-                </Badge>
-                {audioUrl && (
-                  <Button
-                    onClick={playAudioResponse}
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-0"
-                    disabled={isPlaying}
-                  >
-                    {isPlaying ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Volume2 className="h-4 w-4" />
-                      </motion.div>
-                    ) : (
-                      <Volume2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-              </div>
-              
-              <p className="text-sm text-foreground leading-relaxed">
-                {lastResponse}
-              </p>
-              
-              {audioUrl && (
-                <div className="mt-3 pt-3 border-t border-slate-700">
-                  <p className="text-xs text-muted-foreground">
-                    🎧 Click the speaker icon to hear the voice response
-                  </p>
-                </div>
-              )}
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Hidden Audio Element */}
       <audio ref={audioRef} className="hidden" />

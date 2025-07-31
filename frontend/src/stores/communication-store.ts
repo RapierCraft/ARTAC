@@ -77,6 +77,20 @@ interface CommunicationStore {
 const generateMockData = () => {
   const users: User[] = [
     {
+      id: 'ceo-001',
+      name: 'ARTAC CEO',
+      role: 'CEO',
+      status: 'online',
+      avatar: '👑'
+    },
+    {
+      id: 'current-user',
+      name: 'User',
+      role: 'User',
+      status: 'online',
+      avatar: '👤'
+    },
+    {
       id: 'user-1',
       name: 'Alexandra Prime',
       role: 'CEO',
@@ -343,26 +357,104 @@ export const useCommunicationStore = create<CommunicationStore>()(
       // Message operations
       sendMessage: async (channelId, content, mentions = [], replyTo) => {
         const { currentUser } = get()
-        if (!currentUser) return
-
-        const newMessage: Message = {
-          id: `msg-${Date.now()}`,
-          channelId,
-          userId: currentUser.id,
-          content,
-          type: 'text',
-          timestamp: new Date(),
-          mentions,
-          reactions: [],
-          replyTo
+        if (!currentUser) {
+          console.error('No current user found')
+          return
         }
 
-        set(state => ({
-          messages: {
-            ...state.messages,
-            [channelId]: [...(state.messages[channelId] || []), newMessage]
+        console.log('Communication store sendMessage:', { channelId, content, mentions })
+
+        try {
+          // For CEO channel, use real API
+          if (channelId === 'channel-ceo') {
+            console.log('Sending to CEO channel via API...')
+            const response = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                channel_id: channelId,
+                content,
+                mentions,
+                reply_to: replyTo
+              })
+            })
+
+            if (response.ok) {
+              console.log('Message sent to API successfully, refreshing messages...')
+              // Refresh messages for this channel to get both user message and CEO response
+              const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`)
+              const updatedMessages = await messagesResponse.json()
+              console.log('Updated messages received:', updatedMessages.length)
+              
+              // Transform API response to match frontend Message interface
+              const transformedMessages = updatedMessages.map((msg: any) => ({
+                id: msg.id,
+                channelId: msg.channel_id,
+                userId: msg.user_id,
+                content: msg.content,
+                type: 'text',
+                timestamp: new Date(msg.timestamp),
+                mentions: msg.mentions || [],
+                reactions: [],
+                isPinned: false,
+                replyTo: msg.reply_to
+              }))
+              
+              set(state => ({
+                messages: {
+                  ...state.messages,
+                  [channelId]: transformedMessages
+                }
+              }))
+            } else {
+              console.error('API response not ok:', response.status, response.statusText)
+              throw new Error('Failed to send message to CEO')
+            }
+          } else {
+            // For other channels, use local mock behavior
+            const newMessage: Message = {
+              id: `msg-${Date.now()}`,
+              channelId,
+              userId: currentUser.id,
+              content,
+              type: 'text',
+              timestamp: new Date(),
+              mentions,
+              reactions: [],
+              replyTo
+            }
+
+            set(state => ({
+              messages: {
+                ...state.messages,
+                [channelId]: [...(state.messages[channelId] || []), newMessage]
+              }
+            }))
           }
-        }))
+        } catch (error) {
+          console.error('Failed to send message:', error)
+          // Fallback to local behavior
+          const newMessage: Message = {
+            id: `msg-${Date.now()}`,
+            channelId,
+            userId: currentUser.id,
+            content,
+            type: 'text',
+            timestamp: new Date(),
+            mentions,
+            reactions: [],
+            replyTo
+          }
+
+          set(state => ({
+            messages: {
+              ...state.messages,
+              [channelId]: [...(state.messages[channelId] || []), newMessage]
+            }
+          }))
+        }
       },
 
       editMessage: async (messageId, content) => {
@@ -611,18 +703,67 @@ export const useCommunicationStore = create<CommunicationStore>()(
       fetchData: async () => {
         set({ isLoading: true })
         try {
+          // Fetch real data from API
+          const channelsResponse = await fetch('http://localhost:8000/api/v1/communication/channels')
+          const channelsData = await channelsResponse.json()
+          
+          // Load messages for CEO channel
+          const ceoChannel = channelsData.find((c: any) => c.id === 'channel-ceo')
+          let messagesData: Record<string, Message[]> = {}
+          
+          if (ceoChannel) {
+            const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/channel-ceo/messages`)
+            const ceoMessages = await messagesResponse.json()
+            
+            // Transform API response to match frontend Message interface
+            const transformedMessages = ceoMessages.map((msg: any) => ({
+              id: msg.id,
+              channelId: msg.channel_id,
+              userId: msg.user_id,
+              content: msg.content,
+              type: 'text',
+              timestamp: new Date(msg.timestamp),
+              mentions: msg.mentions || [],
+              reactions: [],
+              isPinned: false,
+              replyTo: msg.reply_to
+            }))
+            
+            messagesData['channel-ceo'] = transformedMessages
+          }
+          
+          // Keep existing mock data for other functionality
+          const mockData = generateMockData()
+          
+          // Merge real channels with mock data
+          const allChannels = [
+            ...channelsData,
+            ...mockData.channels.filter((mc: any) => !channelsData.find((rc: any) => rc.id === mc.id))
+          ]
+          
+          set({
+            users: mockData.users,
+            channels: allChannels,
+            messages: { ...mockData.messages, ...messagesData },
+            memos: mockData.memos,
+            currentUser: mockData.users.find(u => u.id === 'current-user') || mockData.users[0], // Set current-user as active user
+            activeChannel: ceoChannel ? ceoChannel.id : mockData.channels[0].id,
+            isLoading: false
+          })
+        } catch (error) {
+          console.error('Failed to load communication data:', error)
+          // Fallback to mock data
           const mockData = generateMockData()
           set({
             users: mockData.users,
             channels: mockData.channels,
             messages: mockData.messages,
             memos: mockData.memos,
-            currentUser: mockData.users[0], // Set first user as current user for demo
+            currentUser: mockData.users.find(u => u.id === 'current-user') || mockData.users[0],
             activeChannel: mockData.channels[0].id,
-            isLoading: false
+            isLoading: false,
+            error: 'Using offline mode'
           })
-        } catch (error) {
-          set({ error: 'Failed to load communication data', isLoading: false })
         }
       },
 

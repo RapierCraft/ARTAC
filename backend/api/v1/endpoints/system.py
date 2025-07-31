@@ -5,7 +5,7 @@ System status and health monitoring endpoints
 
 from fastapi import APIRouter, Depends, HTTPException
 from services.agent_manager import AgentManager
-from services.rag_service import RAGService
+from services.rag_service import rag_service
 
 router = APIRouter()
 

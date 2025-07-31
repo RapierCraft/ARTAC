@@ -22,11 +22,15 @@ from core.database import database
 from core.logging import setup_logging
 from api.v1.router import api_router
 from services.agent_manager import AgentManager
-from services.rag_service import RAGService
+from services.rag_service import SmartRAGService
 from services.process_manager import process_manager
 from services.ollama_service import ollama_service
 from services.voice_service import voice_service
 from services.whisper_service import whisper_service
+from services.inter_agent_communication import inter_agent_comm
+from services.agent_behavior import agent_behavior_service
+from services.organizational_hierarchy import org_hierarchy
+from services.auto_scaling_hr import auto_scaling_hr
 
 # Setup logging
 setup_logging()
@@ -44,7 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # Initialize services
     app.state.agent_manager = AgentManager()
-    app.state.rag_service = RAGService()
+    app.state.rag_service = SmartRAGService()
     app.state.ollama_service = ollama_service
     app.state.voice_service = voice_service
     app.state.whisper_service = whisper_service
@@ -84,6 +88,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logger.info("⚠️ Whisper service not available - check Whisper installation")
     except Exception as e:
         logger.warning(f"⚠️ Whisper initialization failed: {e} - continuing without STT features")
+    
+    # Initialize inter-agent communication
+    try:
+        await inter_agent_comm.initialize()
+        logger.info("💬 Inter-agent communication system initialized")
+    except Exception as e:
+        logger.warning(f"⚠️ Inter-agent communication initialization failed: {e}")
+    
+    # Initialize agent behavior system
+    try:
+        await agent_behavior_service.initialize()
+        logger.info("🤖 Agent behavior system initialized - agents can now communicate autonomously!")
+    except Exception as e:
+        logger.warning(f"⚠️ Agent behavior initialization failed: {e}")
+    
+    # Initialize organizational hierarchy
+    try:
+        await org_hierarchy.initialize()
+        logger.info("🏢 Organizational hierarchy initialized - accountability and governance active!")
+    except Exception as e:
+        logger.warning(f"⚠️ Organizational hierarchy initialization failed: {e}")
+    
+    # Initialize auto-scaling HR system
+    try:
+        await auto_scaling_hr.initialize()
+        logger.info("📈 Auto-scaling HR (AHR) system initialized - intelligent organizational scaling active!")
+    except Exception as e:
+        logger.warning(f"⚠️ Auto-scaling HR initialization failed: {e}")
     
     # Start process monitoring
     monitor_task = asyncio.create_task(process_manager.monitor_processes())
@@ -211,6 +243,6 @@ if __name__ == "__main__":
         host="0.0.0.0", 
         port=8000,
         reload=reload_enabled,
-        reload_excludes=['/tmp/artac-agent-*', '**/venv/**', '**/__pycache__/**'] if reload_enabled else None,
+        reload_excludes=['venv/**', '__pycache__/**', '*.pyc'] if reload_enabled else None,
         log_level=settings.LOG_LEVEL.lower()
     )

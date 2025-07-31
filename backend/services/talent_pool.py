@@ -242,6 +242,10 @@ class TalentPool:
         """Get all available agents"""
         return [agent for agent in self.agents.values() if agent.status == AgentStatus.AVAILABLE]
     
+    def get_all_agents(self) -> List[Agent]:
+        """Get all agents regardless of status"""
+        return list(self.agents.values())
+    
     def get_agents_by_skill(self, skill_name: str, min_level: SkillLevel = SkillLevel.INTERMEDIATE) -> List[Agent]:
         """Find agents with specific skill at minimum level"""
         matching_agents = []

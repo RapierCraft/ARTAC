@@ -3,30 +3,77 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including Node.js for Claude CLI
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
     ffmpeg \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a mock claude command for testing
-RUN echo '#!/bin/bash\necho "Mock Claude CLI v1.0.0\nThis is a test response from mock Claude."' > /usr/local/bin/claude && \
-    chmod +x /usr/local/bin/claude
+# Install the real Claude CLI
+RUN npm install -g @anthropic-ai/claude-code
+
+# Verify Claude CLI installation and configure
+RUN which claude || echo "Claude CLI not found in PATH"
+RUN claude --version || echo "Claude CLI version check failed"
 
 # Copy requirements first for better caching
-COPY requirements-minimal.txt requirements.txt
+COPY requirements.txt requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies in stages to avoid timeouts
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install core packages first (fast)
+RUN pip install --no-cache-dir \
+    fastapi==0.116.1 \
+    uvicorn[standard]==0.35.0 \
+    pydantic==2.11.7 \
+    pydantic-settings==2.10.1 \
+    python-dotenv==1.1.1 \
+    httpx==0.28.1 \
+    aiofiles==24.1.0 \
+    psutil==7.0.0 \
+    structlog==25.4.0
+
+# Install database packages
+RUN pip install --no-cache-dir \
+    asyncpg==0.30.0 \
+    sqlalchemy[asyncio]==2.0.42 \
+    alembic==1.16.4 \
+    psycopg2-binary==2.9.10 \
+    pgvector==0.4.1
+
+# Install AI packages with timeout protection
+RUN pip install --no-cache-dir --timeout 300 \
+    openai==1.98.0 \
+    anthropic==0.60.0 \
+    tiktoken==0.9.0 \
+    ollama==0.5.1
+
+# Install remaining packages
+RUN pip install --no-cache-dir \
+    redis[hiredis]==6.2.0 \
+    python-socketio==5.13.0 \
+    websockets==15.0.1 \
+    python-jose[cryptography]==3.5.0 \
+    passlib[bcrypt]==1.7.4 \
+    python-multipart==0.0.20
+
+# Install voice processing packages
+RUN pip install --no-cache-dir --timeout 300 \
+    elevenlabs==2.8.1 \
+    openai-whisper==20250625 \
+    pydub==0.25.1 \
+    numpy==2.0.0
 
 # Copy application code
 COPY . .
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash artac
+# Create non-root user for security with same UID as host user
+RUN useradd --create-home --shell /bin/bash --uid 1000 artac
 RUN chown -R artac:artac /app
 USER artac
 

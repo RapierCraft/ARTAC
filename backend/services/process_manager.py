@@ -53,29 +53,20 @@ class ProcessManager:
     async def ensure_headless_mode(self):
         """Ensure all Claude CLI processes are running in headless mode"""
         try:
-            # Check for any Claude processes that might have spawned terminals
-            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            # Only manage processes that we explicitly created
+            # Don't interfere with user's interactive Claude sessions
+            for agent_id, process in list(self.active_processes.items()):
                 try:
-                    if proc.info['name'] and 'claude' in proc.info['name'].lower():
-                        cmdline = proc.info['cmdline'] or []
-                        
-                        # Check if this is one of our managed processes
-                        if proc.info['pid'] not in self.process_agents:
-                            # This is an unknown Claude process - potentially with terminal
-                            logger.log_system_event("unknown_claude_process_detected", {
-                                "pid": proc.info['pid'],
-                                "cmdline": cmdline
-                            })
-                            
-                            # Kill it if it doesn't have headless flags
-                            if '--no-interactive' not in cmdline and '--quiet' not in cmdline:
-                                logger.log_system_event("terminating_non_headless_process", {
-                                    "pid": proc.info['pid']
-                                })
-                                proc.terminate()
-                                
+                    if process.pid and process.returncode is None:
+                        # Just log our managed processes, don't kill external ones
+                        logger.log_system_event("managed_claude_process_check", {
+                            "agent_id": agent_id,
+                            "pid": process.pid,
+                            "status": "active"
+                        })
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
+                    # Process no longer exists, clean it up
+                    self.unregister_process(agent_id)
                     
         except Exception as e:
             logger.log_error(e, {"action": "ensure_headless_mode"})
