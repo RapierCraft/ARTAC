@@ -53,8 +53,8 @@ export function MainContent() {
                 className={`
                   relative h-12 rounded-none border-b-2 border-transparent px-6 
                   text-slate-400 transition-all duration-200
-                  data-[state=active]:border-raisc-500 data-[state=active]:text-white
-                  data-[state=active]:bg-raisc-500/10
+                  data-[state=active]:border-artac-500 data-[state=active]:text-white
+                  data-[state=active]:bg-artac-500/10
                   hover:text-white hover:bg-slate-800/50
                 `}
               >
@@ -63,7 +63,7 @@ export function MainContent() {
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-raisc-500"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-artac-500"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}

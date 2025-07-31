@@ -53,17 +53,17 @@ export function Header({
             <Menu className="h-5 w-5" />
           </Button>
 
-          {/* RAISC Logo & Title */}
+          {/* ARTAC Logo & Title */}
           <div className="flex items-center space-x-3">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-raisc-500 to-raisc-700"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-artac-500 to-artac-700"
             >
               <Zap className="h-4 w-4 text-white" />
             </motion.div>
             <div>
-              <h1 className="text-lg font-bold gradient-text">RAISC</h1>
+              <h1 className="text-lg font-bold gradient-text">ARTAC</h1>
               <p className="text-xs text-muted-foreground">Mission Control</p>
             </div>
           </div>
@@ -158,7 +158,7 @@ export function Header({
       </div>
 
       {/* Header Glow Effect */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-raisc-500/50 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-artac-500/50 to-transparent" />
     </header>
   )
 }

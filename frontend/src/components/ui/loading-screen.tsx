@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 
 const loadingMessages = [
-  'Initializing RAISC System...',
+  'Initializing ARTAC System...',
   'Connecting to Agent Network...',
   'Loading RAG Knowledge Base...',
   'Establishing Claude Code Sessions...',
@@ -31,7 +31,7 @@ export function LoadingScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center mission-control-bg">
       <div className="flex flex-col items-center space-y-8">
-        {/* RAISC Logo */}
+        {/* ARTAC Logo */}
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -39,11 +39,11 @@ export function LoadingScreen() {
           className="flex flex-col items-center space-y-4"
         >
           <div className="relative">
-            <div className="text-6xl font-bold gradient-text">RAISC</div>
-            <div className="absolute -inset-1 bg-gradient-to-r from-raisc-500 to-raisc-700 rounded-lg blur opacity-25"></div>
+            <div className="text-6xl font-bold gradient-text">ARTAC</div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-artac-500 to-artac-700 rounded-lg blur opacity-25"></div>
           </div>
           <div className="text-lg text-muted-foreground">
-            RAG-Enabled AI Software Company
+            Agentic Runtime & Task Allocation Controller
           </div>
         </motion.div>
 
@@ -74,7 +74,7 @@ export function LoadingScreen() {
                 strokeWidth="4"
                 fill="transparent"
                 strokeLinecap="round"
-                className="text-raisc-500"
+                className="text-artac-500"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: (currentMessageIndex + 1) / loadingMessages.length }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
@@ -88,7 +88,7 @@ export function LoadingScreen() {
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-3 h-3 bg-raisc-500 rounded-full"
+                className="w-3 h-3 bg-artac-500 rounded-full"
               />
             </div>
           </div>
@@ -129,7 +129,7 @@ export function LoadingScreen() {
                 repeat: Infinity,
                 delay: i * 0.2,
               }}
-              className="w-3 h-3 bg-raisc-500 rounded-full"
+              className="w-3 h-3 bg-artac-500 rounded-full"
             />
           ))}
         </motion.div>

@@ -1,5 +1,5 @@
 """
-RAISC Tasks API Endpoints
+ARTAC Tasks API Endpoints
 Task management and monitoring endpoints
 """
 

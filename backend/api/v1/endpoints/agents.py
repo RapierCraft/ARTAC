@@ -1,5 +1,5 @@
 """
-RAISC Agents API Endpoints
+ARTAC Agents API Endpoints
 Agent management and monitoring endpoints
 """
 

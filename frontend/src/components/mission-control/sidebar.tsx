@@ -122,7 +122,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-8 h-8 bg-gradient-to-r from-raisc-500 to-raisc-700 rounded-full flex items-center justify-center"
+            className="w-8 h-8 bg-gradient-to-r from-artac-500 to-artac-700 rounded-full flex items-center justify-center"
           >
             <Crown className="w-4 h-4 text-white" />
           </motion.div>
@@ -186,7 +186,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-8 h-8 bg-gradient-to-r from-raisc-500 to-raisc-700 rounded-full flex items-center justify-center"
+            className="w-8 h-8 bg-gradient-to-r from-artac-500 to-artac-700 rounded-full flex items-center justify-center"
           >
             <Crown className="w-4 h-4 text-white" />
           </motion.div>
@@ -209,7 +209,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
             placeholder="Search agents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-md text-sm text-white placeholder-slate-400 focus:outline-none focus:border-raisc-500"
+            className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-md text-sm text-white placeholder-slate-400 focus:outline-none focus:border-artac-500"
           />
         </div>
 

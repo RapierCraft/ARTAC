@@ -1,5 +1,5 @@
 """
-RAISC - RAG-Enabled AI Software Company
+ARTAC - Agentic Runtime & Task Allocation Controller
 Main FastAPI application entry point
 """
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events"""
-    logger.info("🚀 Starting RAISC application...")
+    logger.info("🚀 Starting ARTAC application...")
     
     # Initialize database
     await database.connect()
@@ -54,12 +54,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.monitor_task = monitor_task
     logger.info("✅ Process monitoring started")
     
-    logger.info("🎯 RAISC application ready - All Claude CLI sessions will run in headless mode!")
+    logger.info("🎯 ARTAC application ready - All Claude CLI sessions will run in headless mode!")
     
     yield
     
     # Cleanup
-    logger.info("🛑 Shutting down RAISC application...")
+    logger.info("🛑 Shutting down ARTAC application...")
     
     # Cancel monitoring task
     if hasattr(app.state, 'monitor_task'):
@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # Create FastAPI application
 app = FastAPI(
-    title="RAISC - RAG-Enabled AI Software Company",
+    title="ARTAC - Agentic Runtime & Task Allocation Controller",
     description="A fully autonomous, hierarchical AI development organization",
     version="0.1.0-alpha",
     lifespan=lifespan,
@@ -110,7 +110,7 @@ app.include_router(api_router, prefix="/api/v1")
 async def root():
     """Root endpoint"""
     return {
-        "message": "RAISC - RAG-Enabled AI Software Company",
+        "message": "ARTAC - Agentic Runtime & Task Allocation Controller",
         "version": "0.1.0-alpha",
         "status": "operational",
         "docs": "/docs"
@@ -175,6 +175,6 @@ if __name__ == "__main__":
         host="0.0.0.0", 
         port=8000,
         reload=reload_enabled,
-        reload_excludes=['/tmp/raisc-agent-*', '**/venv/**', '**/__pycache__/**'] if reload_enabled else None,
+        reload_excludes=['/tmp/artac-agent-*', '**/venv/**', '**/__pycache__/**'] if reload_enabled else None,
         log_level=settings.LOG_LEVEL.lower()
     )

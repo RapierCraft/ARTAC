@@ -1,5 +1,5 @@
 """
-RAISC Claude Code Service
+ARTAC Claude Code Service
 Integration with Claude Code CLI for agent operations
 """
 
@@ -28,7 +28,7 @@ class ClaudeCodeSession:
     def __init__(self, agent_id: str, working_directory: str = None):
         self.agent_id = agent_id
         self.session_id = str(uuid.uuid4())
-        self.working_directory = working_directory or tempfile.mkdtemp(prefix=f"raisc-agent-{agent_id}-")
+        self.working_directory = working_directory or tempfile.mkdtemp(prefix=f"artac-agent-{agent_id}-")
         self.process: Optional[subprocess.Popen] = None
         self.is_active = False
         

@@ -1,5 +1,5 @@
 """
-RAISC System API Endpoints
+ARTAC System API Endpoints
 System status and health monitoring endpoints
 """
 

@@ -84,7 +84,7 @@ export function AgentHierarchyNode({ agent, status }: AgentHierarchyNodeProps) {
     >
       <Card className={cn(
         "bg-slate-800/30 border-slate-700/50 hover:bg-slate-800/50 transition-all duration-200",
-        "hover:border-raisc-500/30"
+        "hover:border-artac-500/30"
       )}>
         <div className="p-3 space-y-2">
           {/* Agent Header */}

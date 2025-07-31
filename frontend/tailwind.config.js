@@ -52,7 +52,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // RAISC Custom Colors
+        // ARTAC Custom Colors
         raisc: {
           50: '#f0f9ff',
           100: '#e0f2fe',

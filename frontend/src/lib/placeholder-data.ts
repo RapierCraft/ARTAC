@@ -130,7 +130,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-ceo-001',
       session_id: 'session-ceo-001',
       active: true,
-      working_directory: '/tmp/raisc-agent-ceo-001-abc123',
+      working_directory: '/tmp/artac-agent-ceo-001-abc123',
       process_id: 12345
     }
   },
@@ -147,7 +147,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-cto-001',
       session_id: 'session-cto-001',
       active: true,
-      working_directory: '/tmp/raisc-agent-cto-001-def456',
+      working_directory: '/tmp/artac-agent-cto-001-def456',
       process_id: 12346
     }
   },
@@ -164,7 +164,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-pm-001',
       session_id: 'session-pm-001',
       active: true,
-      working_directory: '/tmp/raisc-agent-pm-001-ghi789',
+      working_directory: '/tmp/artac-agent-pm-001-ghi789',
       process_id: 12347
     }
   },
@@ -181,7 +181,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-dev-001',
       session_id: 'session-dev-001',
       active: true,
-      working_directory: '/tmp/raisc-agent-dev-001-jkl012',
+      working_directory: '/tmp/artac-agent-dev-001-jkl012',
       process_id: 12348
     }
   },
@@ -198,7 +198,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-dev-002',
       session_id: 'session-dev-002',
       active: true,
-      working_directory: '/tmp/raisc-agent-dev-002-mno345',
+      working_directory: '/tmp/artac-agent-dev-002-mno345',
       process_id: 12349
     }
   },
@@ -215,7 +215,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-jun-001',
       session_id: 'session-jun-001',
       active: true,
-      working_directory: '/tmp/raisc-agent-jun-001-pqr678',
+      working_directory: '/tmp/artac-agent-jun-001-pqr678',
       process_id: 12350
     }
   },
@@ -232,7 +232,7 @@ export const mockAgentStatuses: AgentStatus[] = [
       agent_id: 'agent-devops-001',
       session_id: 'session-devops-001',
       active: true,
-      working_directory: '/tmp/raisc-agent-devops-001-stu901',
+      working_directory: '/tmp/artac-agent-devops-001-stu901',
       process_id: 12351
     }
   }

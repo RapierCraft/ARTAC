@@ -1,5 +1,5 @@
 """
-RAISC API v1 Router
+ARTAC API v1 Router
 Main API router for all v1 endpoints
 """
 

@@ -22,9 +22,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . .
 
 # Create non-root user for security
-RUN useradd --create-home --shell /bin/bash raisc
-RUN chown -R raisc:raisc /app
-USER raisc
+RUN useradd --create-home --shell /bin/bash artac
+RUN chown -R artac:artac /app
+USER artac
 
 # Expose port
 EXPOSE 8000

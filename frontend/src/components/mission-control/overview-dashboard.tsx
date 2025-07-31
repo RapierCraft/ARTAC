@@ -138,7 +138,7 @@ export function OverviewDashboard() {
             <Card className="bg-slate-800/50 border-slate-700/50 h-full">
               <CardHeader>
                 <CardTitle className="text-white flex items-center space-x-2">
-                  <Activity className="w-5 h-5 text-raisc-500" />
+                  <Activity className="w-5 h-5 text-artac-500" />
                   <span>System Health</span>
                 </CardTitle>
                 <CardDescription>Real-time system performance metrics</CardDescription>

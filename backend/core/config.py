@@ -1,5 +1,5 @@
 """
-RAISC Configuration Management
+ARTAC Configuration Management
 Centralized configuration using Pydantic settings
 """
 
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Application
-    PROJECT_NAME: str = "RAISC"
+    PROJECT_NAME: str = "ARTAC"
     VERSION: str = "0.1.0-alpha"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"

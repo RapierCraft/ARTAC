@@ -1,7 +1,7 @@
 {
-  "name": "raisc-frontend",
+  "name": "artac-frontend",
   "version": "0.1.0-alpha",
-  "description": "RAISC Mission Control Dashboard - Frontend",
+  "description": "ARTAC Mission Control Dashboard - Frontend",
   "private": true,
   "scripts": {
     "dev": "next dev",

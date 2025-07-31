@@ -1,4 +1,4 @@
--- RAISC Database Initialization
+-- ARTAC Database Initialization
 -- PostgreSQL with pgvector setup
 
 -- Enable required extensions

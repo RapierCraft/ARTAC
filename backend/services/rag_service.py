@@ -1,5 +1,5 @@
 """
-RAISC RAG Service
+ARTAC RAG Service
 Retrieval Augmented Generation service for context management
 """
 

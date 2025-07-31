@@ -150,7 +150,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
             "relative h-12 w-12 rounded-full transition-all duration-300",
             isActive
               ? "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/25"
-              : "bg-raisc-600 hover:bg-raisc-700 text-white shadow-lg shadow-raisc-500/25"
+              : "bg-artac-600 hover:bg-artac-700 text-white shadow-lg shadow-artac-500/25"
           )}
         >
           {isActive ? (
@@ -214,7 +214,7 @@ export function VoiceInterface({ isActive, onToggle }: VoiceInterfaceProps) {
                   delay: i * 0.1,
                   ease: "easeInOut",
                 }}
-                className="w-1 bg-raisc-500 rounded-full"
+                className="w-1 bg-artac-500 rounded-full"
                 style={{ height: Math.max(8, (audioLevel * 20) / 100) }}
               />
             ))}

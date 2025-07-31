@@ -1,10 +1,10 @@
-# 🏢 RAISC - RAG-Enabled AI Software Company
+# 🤖 ARTAC - Agentic Runtime & Task Allocation Controller
 
 **A fully autonomous, hierarchical AI development organization that operates 24/7 with minimal human oversight.**
 
 ## 🎯 Project Overview
 
-RAISC creates a complete AI-powered software company featuring:
+ARTAC creates a complete AI-powered software company featuring:
 - **Hierarchical AI Agents** (Executive → Management → Development → Execution)
 - **Voice-Controlled Management** via Whisper STT + TTS
 - **RAG-Based Context Management** for codebase understanding
@@ -39,8 +39,8 @@ RAISC creates a complete AI-powered software company featuring:
 
 ```bash
 # Clone and setup
-git init raisc
-cd raisc
+git init artac
+cd artac
 
 # Start infrastructure
 docker-compose up -d

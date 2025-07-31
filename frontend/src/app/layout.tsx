@@ -15,12 +15,12 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'RAISC - Mission Control',
-  description: 'RAG-Enabled AI Software Company - Mission Control Dashboard',
+  title: 'ARTAC - Mission Control',
+  description: 'Agentic Runtime & Task Allocation Controller - Mission Control Dashboard',
   keywords: ['AI', 'Software Development', 'Automation', 'RAG', 'Claude'],
-  authors: [{ name: 'RAISC Development Team' }],
-  creator: 'RAISC',
-  publisher: 'RAISC',
+  authors: [{ name: 'ARTAC Development Team' }],
+  creator: 'ARTAC',
+  publisher: 'ARTAC',
   robots: {
     index: false,
     follow: false,

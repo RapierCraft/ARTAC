@@ -1,5 +1,5 @@
 """
-RAISC Logging Configuration
+ARTAC Logging Configuration
 Structured logging with multiple outputs
 """
 
@@ -49,8 +49,8 @@ def setup_logging():
         logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
 
-class RAISCLogger:
-    """Custom logger for RAISC with agent context"""
+class ARTACLogger:
+    """Custom logger for ARTAC with agent context"""
     
     def __init__(self, name: str):
         self.logger = structlog.get_logger(name)
@@ -92,6 +92,6 @@ class RAISCLogger:
         )
 
 
-def get_logger(name: str) -> RAISCLogger:
-    """Get a RAISC logger instance"""
-    return RAISCLogger(name)
+def get_logger(name: str) -> ARTACLogger:
+    """Get a ARTAC logger instance"""
+    return ARTACLogger(name)

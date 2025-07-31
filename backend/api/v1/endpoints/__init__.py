@@ -1,1 +1,1 @@
-# RAISC API v1 Endpoints Package
+# ARTAC API v1 Endpoints Package

@@ -43,7 +43,7 @@ class DockerClaudeCodeSession:
             docker_cmd = [
                 "docker", "run", "-d",
                 "--name", self.container_name,
-                "--network", "raisc-network",
+                "--network", "artac-network",
                 # Mount the workspace
                 "-v", f"{os.path.abspath('.')}:/workspace/artac",
                 # Environment variables
@@ -52,7 +52,7 @@ class DockerClaudeCodeSession:
                 "-e", "ENVIRONMENT=development",
                 "-e", "DEBUG=true",
                 # Use the claude-dev image
-                "raisc-claude-dev:latest",
+                "artac-claude-dev:latest",
                 # Keep container running
                 "tail", "-f", "/dev/null"
             ]
@@ -208,7 +208,7 @@ class ClaudeCodeDockerService:
             
             # Check if claude-dev image exists
             result = subprocess.run(
-                ["docker", "images", "-q", "raisc-claude-dev:latest"],
+                ["docker", "images", "-q", "artac-claude-dev:latest"],
                 capture_output=True,
                 text=True
             )
@@ -217,7 +217,7 @@ class ClaudeCodeDockerService:
                 logger.info("Building claude-dev Docker image...")
                 # Build the image
                 build_result = subprocess.run(
-                    ["docker", "build", "-t", "raisc-claude-dev:latest", "./claude-dev"],
+                    ["docker", "build", "-t", "artac-claude-dev:latest", "./claude-dev"],
                     cwd=os.path.dirname(os.path.dirname(__file__)),
                     capture_output=True,
                     text=True
@@ -230,13 +230,13 @@ class ClaudeCodeDockerService:
             
             # Ensure network exists
             subprocess.run(
-                ["docker", "network", "create", "raisc-network"],
+                ["docker", "network", "create", "artac-network"],
                 capture_output=True
             )
             
             logger.log_system_event("docker_claude_ready", {
-                "image": "raisc-claude-dev:latest",
-                "network": "raisc-network"
+                "image": "artac-claude-dev:latest",
+                "network": "artac-network"
             })
             
         except Exception as e:

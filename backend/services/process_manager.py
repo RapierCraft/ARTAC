@@ -1,5 +1,5 @@
 """
-RAISC Process Manager
+ARTAC Process Manager
 Centralized management of Claude CLI processes in headless mode
 """
 

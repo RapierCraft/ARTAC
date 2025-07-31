@@ -101,7 +101,7 @@ export function AgentsMonitoring() {
             <h1 className="text-2xl font-bold text-white">Agent Monitoring</h1>
             <p className="text-slate-400">Monitor and manage your AI development team</p>
           </div>
-          <Button className="bg-raisc-600 hover:bg-raisc-700">
+          <Button className="bg-artac-600 hover:bg-artac-700">
             <Users className="w-4 h-4 mr-2" />
             Deploy New Agent
           </Button>

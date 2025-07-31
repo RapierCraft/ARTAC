@@ -1,5 +1,5 @@
 """
-RAISC Database Configuration
+ARTAC Database Configuration
 PostgreSQL with pgvector for embeddings
 """
 

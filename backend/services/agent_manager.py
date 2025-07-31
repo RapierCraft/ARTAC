@@ -1,5 +1,5 @@
 """
-RAISC Agent Manager (Stub)
+ARTAC Agent Manager (Stub)
 Basic agent management without full functionality
 """
 
