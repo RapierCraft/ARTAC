@@ -18,6 +18,14 @@ from services.project_workspace_manager import project_workspace_manager
 from services.project_channel_manager import ProjectChannelManager
 from services.inter_agent_communication import InterAgentCommunicationService
 
+# Assembly platform integration
+try:
+    from services.artac_assembly import artac_assembly
+    from services.perpetual_efficiency_model import perpetual_efficiency_model
+except ImportError:
+    artac_assembly = None
+    perpetual_efficiency_model = None
+
 logger = get_logger(__name__)
 
 
@@ -106,6 +114,27 @@ class CEOService:
         
         # Create project communication channels
         channels_created = await self._create_project_channels(project_id, title, "ceo-001")
+        
+        # Initialize Assembly platform for collaborative work
+        if artac_assembly:
+            try:
+                # This integrates with the human directive workflow
+                await artac_assembly.initiate_project_genesis(
+                    human_directive=description,
+                    project_title=title,
+                    estimated_budget_hours=analysis["estimated_hours"],
+                    timeline_weeks=max(1, analysis["estimated_hours"] // 40),  # Rough weeks estimate
+                    ceo_agent_id="ceo-001"
+                )
+                logger.log_system_event("assembly_platform_integrated", {
+                    "project_id": project_id,
+                    "assembly_initiated": True
+                })
+            except Exception as e:
+                logger.log_error(e, {
+                    "action": "assembly_platform_integration",
+                    "project_id": project_id
+                })
         
         # Log CEO decision-making process
         await interaction_logger.log_interaction(

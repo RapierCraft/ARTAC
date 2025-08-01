@@ -24,6 +24,15 @@ from core.config import settings
 
 logger = get_logger(__name__)
 
+# Import realistic patterns for enhanced behavior
+try:
+    from services.realistic_agent_patterns import RealisticAgentPatterns, WorkStatus, ResponsePattern
+except ImportError:
+    # Fallback if realistic patterns not available
+    RealisticAgentPatterns = None
+    WorkStatus = None
+    ResponsePattern = None
+
 
 class AgentBehaviorType(str, Enum):
     PROACTIVE_COMMUNICATION = "proactive_communication"
@@ -135,6 +144,16 @@ class AgentBehaviorService:
         self.last_behavior_execution: Dict[str, Dict[str, datetime]] = {}
         self.claude_service = ClaudeCodeService()
         
+        # Initialize realistic patterns if available
+        self.realistic_patterns = None
+        if RealisticAgentPatterns:
+            try:
+                from services.inter_agent_communication import inter_agent_comm
+                from services.project_channel_manager import project_channel_manager
+                self.realistic_patterns = RealisticAgentPatterns(inter_agent_comm, project_channel_manager)
+            except Exception as e:
+                logger.error(f"Failed to initialize realistic patterns: {e}")
+        
     async def initialize(self):
         """Initialize the agent behavior service"""
         logger.log_system_event("agent_behavior_service_initializing", {})
@@ -157,6 +176,13 @@ class AgentBehaviorService:
             self.agent_personalities[agent.id] = AgentPersonality(agent)
             self.active_behaviors[agent.id] = list(AgentBehaviorType)
             self.last_behavior_execution[agent.id] = {}
+            
+            # Initialize realistic patterns for each agent
+            if self.realistic_patterns:
+                await self.realistic_patterns.initialize_agent_realistic_patterns(
+                    agent_id=agent.id,
+                    role=agent.role.value.lower()
+                )
     
     async def _behavior_loop(self):
         """Main behavior execution loop"""
@@ -246,6 +272,33 @@ class AgentBehaviorService:
         
         for message in unread_messages:
             if await self._should_respond_to_message(message, personality):
+                # Check if we should use realistic timing
+                if self.realistic_patterns:
+                    # Calculate realistic response delay
+                    delay_minutes = await self.realistic_patterns.calculate_realistic_response_delay(
+                        agent_id=agent.id,
+                        message_type=message.message_type.value if hasattr(message, 'message_type') else "general",
+                        priority=message.priority.value if hasattr(message, 'priority') else "normal",
+                        from_agent_id=message.from_agent_id if hasattr(message, 'from_agent_id') else None
+                    )
+                    
+                    # Queue the response for realistic timing
+                    if delay_minutes > 2:  # Only delay if more than 2 minutes
+                        response_content = await self._generate_intelligent_response(agent, message)
+                        await self.realistic_patterns.queue_delayed_message(
+                            agent_id=agent.id,
+                            message_content=response_content,
+                            message_type="response",
+                            delay_minutes=delay_minutes,
+                            metadata={
+                                "original_message_id": message.id,
+                                "responding_to": message.from_agent_id if hasattr(message, 'from_agent_id') else "unknown"
+                            }
+                        )
+                        await inter_agent_comm.mark_message_read(agent.id, message.id)
+                        continue
+                
+                # Default immediate response for non-delayed messages
                 await self._generate_and_send_response(agent, message, personality)
                 await inter_agent_comm.mark_message_read(agent.id, message.id)
     
@@ -550,6 +603,124 @@ Generate your response as {agent.name}:"""
     async def _execute_knowledge_sharing(self, agent: Agent, personality: AgentPersonality):
         """Execute knowledge sharing behavior"""
         await self._share_knowledge(agent)
+    
+    # Enhanced methods for realistic patterns integration
+    async def get_agent_availability_status(self, agent_id: str) -> Optional[str]:
+        """Get current availability status for an agent"""
+        if self.realistic_patterns:
+            availability = await self.realistic_patterns.get_agent_availability(agent_id)
+            return availability.current_status.value if availability else "unknown"
+        return "available"  # Default fallback
+    
+    async def get_estimated_response_time(self, agent_id: str, message_type: str = "general") -> int:
+        """Get estimated response time in minutes for an agent"""
+        if self.realistic_patterns:
+            return await self.realistic_patterns.get_estimated_response_time(agent_id, message_type)
+        return 5  # Default 5 minutes
+    
+    async def is_agent_interruptible(self, agent_id: str) -> bool:
+        """Check if an agent can be interrupted right now"""
+        if self.realistic_patterns:
+            return await self.realistic_patterns.is_agent_interruptible(agent_id)
+        return True  # Default to interruptible
+    
+    async def schedule_agent_focus_time(self, agent_id: str, duration_minutes: int, task_description: str):
+        """Schedule focused work time for an agent"""
+        if self.realistic_patterns:
+            await self.realistic_patterns.schedule_focus_time(agent_id, duration_minutes, task_description)
+    
+    async def update_agent_workload(self, agent_id: str, workload_delta: float):
+        """Update an agent's current workload (positive = more work, negative = less work)"""
+        if self.realistic_patterns:
+            await self.realistic_patterns.update_agent_workload(agent_id, workload_delta)
+    
+    async def generate_meeting_introduction(
+        self,
+        agent_id: str,
+        meeting_type: str,
+        meeting_context: str,
+        role: str
+    ) -> Optional[str]:
+        """Generate a natural meeting introduction based on agent behavior"""
+        try:
+            agent = None
+            all_agents = talent_pool.get_all_agents()
+            for a in all_agents:
+                if a.id == agent_id:
+                    agent = a
+                    break
+            
+            if not agent:
+                return None
+            
+            personality = self.agent_personalities.get(agent_id)
+            if not personality:
+                return None
+            
+            # Generate introduction based on personality
+            intro_templates = {
+                "extrovert": [
+                    f"Hi everyone! {agent.name} here, excited to dive into this {meeting_type}!",
+                    f"Great to see the team! Looking forward to collaborating on {meeting_context[:30]}...",
+                    f"Hello all! Ready to tackle today's discussion and make some real progress!"
+                ],
+                "introvert": [
+                    f"Hello team. {agent.name} joining in. I've been thinking about {meeting_context[:40]}...",
+                    f"Hi everyone. I'm here and ready to contribute to our {meeting_type}.",
+                    f"Good to be here. I have some thoughts on what we're discussing today."
+                ],
+                "collaborative": [
+                    f"Hi team! Excited to work together on {meeting_type}. I believe we can find great solutions collectively.",
+                    f"Hello everyone! Looking forward to hearing everyone's perspectives on {meeting_context[:30]}...",
+                    f"Great to collaborate with you all. I think this {meeting_type} will be very productive!"
+                ]
+            }
+            
+            # Find matching personality trait
+            template_key = "collaborative"  # Default
+            for trait in agent.personality:
+                trait_lower = trait.trait.lower()
+                if "extrovert" in trait_lower:
+                    template_key = "extrovert"
+                    break
+                elif "introvert" in trait_lower:
+                    template_key = "introvert"
+                    break
+                elif "collaborative" in trait_lower:
+                    template_key = "collaborative"
+                    break
+            
+            templates = intro_templates.get(template_key, intro_templates["collaborative"])
+            base_intro = random.choice(templates)
+            
+            # Add role-specific context
+            role_additions = {
+                "ceo": " As we discuss this, let's keep our strategic objectives and company vision in mind.",
+                "cto": " I'll be focusing on the technical architecture and long-term scalability considerations.",
+                "senior_developer": " I'm here to provide technical guidance and ensure we maintain high code quality.",
+                "developer": " Ready to implement solutions and ask questions to ensure we build the right thing.",
+                "qa_engineer": " I'll be thinking about testing strategies and quality assurance throughout our discussion.",
+                "project_manager": " I'll help keep us on track with timelines, deliverables, and resource planning.",
+                "architect": " I'll focus on system design, integration patterns, and architectural best practices."
+            }
+            
+            role_addition = role_additions.get(role.lower(), "")
+            return base_intro + role_addition
+            
+        except Exception as e:
+            logger.log_error(e, {
+                "action": "generate_meeting_introduction",
+                "agent_id": agent_id
+            })
+            return f"Hello everyone, {self._get_agent_name(agent_id)} here and ready to contribute to our {meeting_type}."
+    
+    def _get_agent_name(self, agent_id: str) -> str:
+        """Get display name for agent"""
+        all_agents = talent_pool.get_all_agents()
+        for agent in all_agents:
+            if agent.id == agent_id:
+                return agent.name
+        return agent_id  # Fallback to ID
     
     async def _send_project_update(self, agent: Agent):
         """Send project-related updates"""

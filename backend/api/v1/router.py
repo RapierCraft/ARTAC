@@ -4,7 +4,7 @@ Main API router for all v1 endpoints
 """
 
 from fastapi import APIRouter
-from api.v1.endpoints import agents, tasks, system, demo, voice, communication, inter_agent_communication, organizational_hierarchy, auto_scaling_hr, claude_auth, collaboration, ceo
+from api.v1.endpoints import agents, tasks, system, demo, voice, communication, inter_agent_communication, organizational_hierarchy, auto_scaling_hr, claude_auth, collaboration, ceo, assembly
 
 api_router = APIRouter()
 
@@ -21,3 +21,4 @@ api_router.include_router(auto_scaling_hr.router, prefix="/ahr", tags=["auto-sca
 api_router.include_router(claude_auth.router, tags=["claude-auth"])
 api_router.include_router(collaboration.router, prefix="/collaboration", tags=["multi-agent-collaboration"])
 api_router.include_router(ceo.router, prefix="/ceo", tags=["ceo"])
+api_router.include_router(assembly.router, prefix="/assembly", tags=["artac-assembly"])
