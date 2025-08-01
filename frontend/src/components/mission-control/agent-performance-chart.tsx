@@ -17,9 +17,9 @@ export function AgentPerformanceChart() {
   const chartData = useMemo(() => {
     // Group agents by level and calculate average performance
     const levelStats = agents.reduce((acc, agent) => {
-      const level = agent.level
+      const level = agent.level || 'execution' // Default to execution level if undefined
       const status = agentStatuses[agent.id]
-      const performance = status?.performance_score || agent.performance_score
+      const performance = status?.performance_score || agent.performance_score || 0
       
       if (!acc[level]) {
         acc[level] = {
@@ -193,7 +193,7 @@ export function AgentPerformanceChart() {
             {agents
               .map(agent => ({
                 ...agent,
-                currentPerformance: agentStatuses[agent.id]?.performance_score || agent.performance_score
+                currentPerformance: agentStatuses[agent.id]?.performance_score || agent.performance_score || 0
               }))
               .sort((a, b) => b.currentPerformance - a.currentPerformance)
               .slice(0, 3)
@@ -212,7 +212,7 @@ export function AgentPerformanceChart() {
             {agents
               .map(agent => ({
                 ...agent,
-                currentPerformance: agentStatuses[agent.id]?.performance_score || agent.performance_score
+                currentPerformance: agentStatuses[agent.id]?.performance_score || agent.performance_score || 0
               }))
               .filter(agent => agent.currentPerformance < 70)
               .sort((a, b) => a.currentPerformance - b.currentPerformance)
@@ -224,7 +224,7 @@ export function AgentPerformanceChart() {
                 </div>
               ))}
           </div>
-          {agents.filter(agent => (agentStatuses[agent.id]?.performance_score || agent.performance_score) < 70).length === 0 && (
+          {agents.filter(agent => (agentStatuses[agent.id]?.performance_score || agent.performance_score || 0) < 70).length === 0 && (
             <p className="text-xs text-muted-foreground">All agents performing well</p>
           )}
         </div>
@@ -236,7 +236,7 @@ export function AgentPerformanceChart() {
               <span className="text-muted-foreground">Average Performance</span>
               <span className="text-muted-foreground">
                 {agents.length > 0 
-                  ? (agents.reduce((sum, agent) => sum + (agentStatuses[agent.id]?.performance_score || agent.performance_score), 0) / agents.length).toFixed(1)
+                  ? (agents.reduce((sum, agent) => sum + (agentStatuses[agent.id]?.performance_score || agent.performance_score || 0), 0) / agents.length).toFixed(1)
                   : 0}%
               </span>
             </div>

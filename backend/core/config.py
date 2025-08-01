@@ -40,7 +40,8 @@ class Settings(BaseSettings):
     
     # AI Services - Claude Code CLI Integration
     CLAUDE_CODE_PATH: str = "claude"  # Path to claude command (installed globally in container)
-    # ANTHROPIC_API_KEY removed to allow OAuth authentication for Max plan
+    # ANTHROPIC_API_KEY optional - can use OAuth authentication for Max plan
+    ANTHROPIC_API_KEY: Optional[str] = None  # Set this to use API key authentication instead of OAuth
     OPENAI_API_KEY: Optional[str] = None
     ELEVENLABS_API_KEY: Optional[str] = None
     
@@ -84,6 +85,16 @@ class Settings(BaseSettings):
     PROMETHEUS_PORT: int = 9090
     GRAFANA_PORT: int = 3001
     ENABLE_METRICS: bool = True
+    
+    # Multi-Agent Collaboration Configuration
+    WORKSPACE_ROOT: str = "/tmp/artac-workspaces"
+    DATA_ROOT: str = "/tmp/artac-data"
+    MAX_PROJECTS: int = 50
+    MAX_AGENTS_PER_PROJECT: int = 20
+    COLLABORATION_TIMEOUT: int = 300  # 5 minutes
+    FILE_LOCK_TIMEOUT: int = 1800  # 30 minutes
+    CONTEXT_CACHE_TTL: int = 900  # 15 minutes
+    ANALYTICS_RETENTION_DAYS: int = 90
     
     @validator("ALLOWED_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v):

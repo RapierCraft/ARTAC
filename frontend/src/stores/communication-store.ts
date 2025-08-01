@@ -7,6 +7,7 @@ interface CommunicationStore {
   currentUser: User | null
   users: User[]
   channels: Channel[]
+  allChannels: Channel[] // All channels from backend
   messages: Record<string, Message[]> // channelId -> messages
   threads: Record<string, Thread> // messageId -> thread
   memos: Memo[]
@@ -15,6 +16,9 @@ interface CommunicationStore {
   isLoading: boolean
   error: string | null
   notificationSettings: NotificationSettings | null
+  
+  // AI Agent typing states
+  agentTyping: Record<string, { agentName: string; isTyping: boolean }> // channelId -> agent info
   
   // UI State
   showUserList: boolean
@@ -33,9 +37,18 @@ interface CommunicationStore {
   
   // Channel operations
   createChannel: (name: string, description?: string, type?: 'public' | 'private') => Promise<void>
-  joinChannel: (channelId: string) => Promise<void>
+  joinChannel: (channelId: string) => Promise<void>  
   leaveChannel: (channelId: string) => Promise<void>
   deleteChannel: (channelId: string) => Promise<void>
+  loadChannels: () => Promise<void>
+  loadMessages: (channelId: string) => Promise<void>
+  checkBackendConnection: () => Promise<boolean>
+  initialize: () => Promise<void>
+  
+  // Project-based channel filtering
+  filterChannelsForProject: (projectId: string | null) => void
+  getHomeChannels: () => Channel[]
+  getProjectChannels: (projectId: string) => Channel[]
   
   // Message operations
   sendMessage: (channelId: string, content: string, mentions?: string[], replyTo?: string) => Promise<void>
@@ -129,6 +142,16 @@ const generateMockData = () => {
 
   const channels: Channel[] = [
     {
+      id: 'channel-ceo',
+      name: 'ceo',
+      description: 'CEO Communication Channel',
+      type: 'public',
+      members: users.map(u => u.id),
+      createdBy: 'ceo-001',
+      createdAt: new Date('2024-01-01'),
+      unreadCount: 2
+    },
+    {
       id: 'channel-general',
       name: 'general',
       description: 'Company-wide announcements and discussions',
@@ -171,6 +194,43 @@ const generateMockData = () => {
   ]
 
   const messages: Record<string, Message[]> = {
+    'channel-ceo': [
+      {
+        id: 'ceo-msg-1',
+        channelId: 'channel-ceo',
+        userId: 'current-user',
+        content: 'Hello @ceo-001, I wanted to discuss the quarterly projections and get your thoughts on our strategic direction.',
+        type: 'text',
+        timestamp: new Date('2024-07-31T08:00:00Z'),
+        mentions: ['ceo-001'],
+        reactions: []
+      },
+      {
+        id: 'ceo-msg-2',
+        channelId: 'channel-ceo',
+        userId: 'ceo-001',
+        content: 'Great question! Our Q4 strategy focuses on three key areas:\n\n**1. AI Agent Expansion** 🤖\n- Scale our multi-agent architecture\n- Implement advanced decision-making capabilities\n\n**2. Market Penetration** 📈\n- Target enterprise clients in finance and healthcare\n- Expand our SaaS offerings\n\n**3. Innovation Pipeline** 🚀\n- Voice-first interfaces\n- Real-time collaboration tools\n\nWhat specific areas would you like to dive deeper into?',
+        type: 'text',
+        timestamp: new Date('2024-07-31T08:05:00Z'),
+        mentions: ['current-user'],
+        reactions: [
+          { emoji: '🚀', users: ['current-user'] },
+          { emoji: '💯', users: ['current-user'] }
+        ],
+        replyTo: 'ceo-msg-1'
+      },
+      {
+        id: 'ceo-msg-3',
+        channelId: 'channel-ceo',
+        userId: 'current-user',
+        content: 'This looks fantastic! I\'m particularly interested in the **Voice-first interfaces**. How do you see this integrating with our current platform?',
+        type: 'text',
+        timestamp: new Date('2024-07-31T08:10:00Z'),
+        mentions: ['ceo-001'],
+        reactions: [],
+        replyTo: 'ceo-msg-2'
+      }
+    ],
     'channel-general': [
       {
         id: 'msg-1',
@@ -267,13 +327,60 @@ const generateMockData = () => {
   return { users, channels, messages, memos }
 }
 
+// Generate mock AI responses for offline mode
+const generateMockAIResponse = (userMessage: string, channelId: string, agentName: string): Message | null => {
+  const responses = {
+    'ARTAC CEO': [
+      "Excellent point! Let me think about the strategic implications of this approach.",
+      "That's a great question. Our roadmap focuses on sustainable growth while maintaining innovation excellence.",
+      "I appreciate your insights. This aligns perfectly with our Q4 objectives.",
+      "Thank you for bringing this up. Let's schedule a follow-up to dive deeper into the details.",
+      "This is exactly the kind of forward-thinking we need. Great work!"
+    ],
+    'HR Manager': [
+      "Thanks for reaching out! I'll review the employee handbook and get back to you within 24 hours.",
+      "That's a great suggestion for improving our workplace culture. Let me discuss this with the team.",
+      "I understand your concern. Let's set up a meeting to address this properly.",
+      "Employee wellbeing is our top priority. I'll make sure this gets the attention it deserves."
+    ],
+    'Tech Lead': [
+      "Good catch! Let me review the technical specifications and provide detailed feedback.",
+      "This looks promising. Have you considered the scalability implications?",
+      "I'll need to run some tests, but this approach should work well with our current architecture.",
+      "Great implementation! This will definitely improve our system performance."
+    ],
+    'AI Agent': [
+      "I'm analyzing your request and will provide a comprehensive response shortly.",
+      "Based on our conversation history, I recommend exploring these options further.",
+      "That's an interesting perspective. Let me gather some additional data to support this.",
+      "I understand your requirements. Here's my analysis of the situation."
+    ]
+  }
+
+  const agentResponses = responses[agentName as keyof typeof responses] || responses['AI Agent']
+  const randomResponse = agentResponses[Math.floor(Math.random() * agentResponses.length)]
+
+  return {
+    id: `ai-response-${Date.now()}`,
+    channelId,
+    userId: agentName === 'ARTAC CEO' ? 'ceo-001' : 'ai-agent',
+    content: randomResponse,
+    type: 'text',
+    timestamp: new Date(),
+    mentions: [],
+    reactions: [],
+    isPinned: false
+  }
+}
+
 export const useCommunicationStore = create<CommunicationStore>()(
   devtools(
     (set, get) => ({
       // Initial state
       currentUser: null,
       users: [],
-      channels: [],
+      channels: [], // Filtered channels based on active project
+      allChannels: [], // All channels from backend
       messages: {},
       threads: {},
       memos: [],
@@ -282,6 +389,7 @@ export const useCommunicationStore = create<CommunicationStore>()(
       isLoading: false,
       error: null,
       notificationSettings: null,
+      agentTyping: {},
       
       // UI State
       showUserList: true,
@@ -363,11 +471,29 @@ export const useCommunicationStore = create<CommunicationStore>()(
         }
 
         console.log('Communication store sendMessage:', { channelId, content, mentions })
+        console.log('Current messages for this channel:', get().messages[channelId])
+
+        // Determine which agent will respond based on channel (moved to top for both online/offline paths)
+        let agentName = 'AI Agent'
+        
+        if (channelId === 'ceo' || channelId === 'channel-ceo' || mentions.includes('ceo') || content.toLowerCase().includes('@ceo')) {
+          agentName = 'ARTAC CEO'
+        } else if (channelId === 'hr' || channelId === 'channel-hr' || mentions.includes('hr') || content.toLowerCase().includes('@hr')) {
+          agentName = 'HR Manager'
+        } else if (channelId === 'tech' || channelId === 'channel-tech' || mentions.includes('tech') || content.toLowerCase().includes('@tech')) {
+          agentName = 'Tech Lead'
+        } else if (channelId === 'finance' || channelId === 'channel-finance' || mentions.includes('finance') || content.toLowerCase().includes('@finance')) {
+          agentName = 'Finance Manager'
+        }
+
+        console.log('Determined agent for response:', agentName)
+
+        // Check if backend is connected
+        const isBackendOnline = await get().checkBackendConnection()
 
         try {
-          // For CEO channel, use real API
-          if (channelId === 'channel-ceo') {
-            console.log('Sending to CEO channel via API...')
+          if (isBackendOnline) {
+            // Use real API
             const response = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`, {
               method: 'POST',
               headers: {
@@ -375,69 +501,84 @@ export const useCommunicationStore = create<CommunicationStore>()(
               },
               body: JSON.stringify({
                 channel_id: channelId,
-                content,
-                mentions,
+                content: content,
+                mentions: mentions,
                 reply_to: replyTo
               })
             })
-
+            
             if (response.ok) {
-              console.log('Message sent to API successfully, refreshing messages...')
-              // Refresh messages for this channel to get both user message and CEO response
-              const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`)
-              const updatedMessages = await messagesResponse.json()
-              console.log('Updated messages received:', updatedMessages.length)
+              // Message sent successfully, reload messages to get the latest
+              await get().loadMessages(channelId)
               
-              // Transform API response to match frontend Message interface
-              const transformedMessages = updatedMessages.map((msg: any) => ({
-                id: msg.id,
-                channelId: msg.channel_id,
-                userId: msg.user_id,
-                content: msg.content,
-                type: 'text',
-                timestamp: new Date(msg.timestamp),
-                mentions: msg.mentions || [],
-                reactions: [],
-                isPinned: false,
-                replyTo: msg.reply_to
-              }))
-              
-              set(state => ({
-                messages: {
-                  ...state.messages,
-                  [channelId]: transformedMessages
-                }
-              }))
-            } else {
-              console.error('API response not ok:', response.status, response.statusText)
-              throw new Error('Failed to send message to CEO')
-            }
-          } else {
-            // For other channels, use local mock behavior
-            const newMessage: Message = {
-              id: `msg-${Date.now()}`,
-              channelId,
-              userId: currentUser.id,
-              content,
-              type: 'text',
-              timestamp: new Date(),
-              mentions,
-              reactions: [],
-              replyTo
-            }
-
-            set(state => ({
-              messages: {
-                ...state.messages,
-                [channelId]: [...(state.messages[channelId] || []), newMessage]
+              // Check if this is CEO channel and call real CEO API
+              if (agentName === 'ARTAC CEO') {
+                console.log('Triggering CEO response after successful message send...')
+                
+                // Show typing indicator
+                set(state => ({
+                  agentTyping: {
+                    ...state.agentTyping,
+                    [channelId]: { agentName, isTyping: true }
+                  }
+                }))
+                
+                // Call CEO API for response
+                setTimeout(async () => {
+                  try {
+                    const ceoResponse = await fetch('http://localhost:8000/api/v1/ceo/chat', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        message: content,
+                        user_id: currentUser.id
+                      })
+                    })
+                    
+                    if (ceoResponse.ok) {
+                      const data = await ceoResponse.json()
+                      const aiResponse: Message = {
+                        id: `ai-${Date.now()}`,
+                        channelId,
+                        userId: 'ceo-001',
+                        content: data.message,
+                        type: 'text',
+                        timestamp: new Date(),
+                        mentions: [],
+                        reactions: [],
+                        isPinned: false
+                      }
+                      
+                      // Add CEO response to messages
+                      set(state => ({
+                        messages: {
+                          ...state.messages,
+                          [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                        },
+                        agentTyping: {
+                          ...state.agentTyping,
+                          [channelId]: { agentName: '', isTyping: false }
+                        }
+                      }))
+                    } else {
+                      console.error('CEO API call failed:', ceoResponse.statusText)
+                    }
+                  } catch (error) {
+                    console.error('CEO API error:', error)
+                  }
+                }, 1500) // 1.5 second delay for CEO response
               }
-            }))
+              return
+            } else {
+              console.error('Failed to send message via API:', response.statusText)
+              // Fall through to mock implementation
+            }
           }
-        } catch (error) {
-          console.error('Failed to send message:', error)
-          // Fallback to local behavior
-          const newMessage: Message = {
-            id: `msg-${Date.now()}`,
+          // 1. IMMEDIATELY add user message to UI (optimistic update)
+          const userMessage: Message = {
+            id: `temp-${Date.now()}`,
             channelId,
             userId: currentUser.id,
             content,
@@ -445,15 +586,288 @@ export const useCommunicationStore = create<CommunicationStore>()(
             timestamp: new Date(),
             mentions,
             reactions: [],
+            isPinned: false,
             replyTo
           }
 
+          // Show user message immediately
           set(state => ({
             messages: {
               ...state.messages,
-              [channelId]: [...(state.messages[channelId] || []), newMessage]
+              [channelId]: [...(state.messages[channelId] || []), userMessage]
             }
           }))
+
+          // 2. Show typing indicator for AI agent response
+          console.log('Showing AI agent typing indicator...')
+          
+          // Agent name already determined at top of function
+          
+          // Set agent typing state
+          set(state => ({
+            agentTyping: {
+              ...state.agentTyping,
+              [channelId]: { agentName, isTyping: true }
+            }
+          }))
+
+          // 3. Send to backend API (with timeout and error handling)
+          console.log(`Sending to ${channelId} via API...`)
+          
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+          
+          const response = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`, {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              channel_id: channelId,
+              content,
+              mentions,
+              reply_to: replyTo
+            })
+          })
+          
+          clearTimeout(timeoutId)
+
+          if (response.ok) {
+            console.log('Message sent to API successfully')
+            
+            // 4. Function to refresh and get real messages from backend
+            const refreshMessages = async () => {
+              const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`)
+              if (messagesResponse.ok) {
+                const updatedMessages = await messagesResponse.json()
+                console.log('Updated messages received:', updatedMessages.length)
+                
+                // Transform API response to match frontend Message interface
+                const transformedMessages = updatedMessages.map((msg: any) => ({
+                  id: msg.id,
+                  channelId: msg.channel_id,
+                  userId: msg.user_id,
+                  content: msg.content,
+                  type: 'text',
+                  timestamp: new Date(msg.timestamp),
+                  mentions: msg.mentions || [],
+                  reactions: [],
+                  isPinned: false,
+                  replyTo: msg.reply_to
+                }))
+                
+                // Check for mentions and trigger notifications
+                const { currentUser } = get()
+                transformedMessages.forEach(msg => {
+                  // Skip if it's our own message
+                  if (msg.userId === currentUser?.id) return
+                  
+                  // Check for mentions of current user
+                  if (msg.mentions.includes(currentUser?.id || '')) {
+                    // Use dynamic import to avoid circular dependency
+                    import('./notification-store').then(({ useNotificationStore }) => {
+                      const { addNotification } = useNotificationStore.getState()
+                      addNotification({
+                        type: 'mention',
+                        title: `You were mentioned`,
+                        message: `In #${state.channels.find(c => c.id === channelId)?.name || 'channel'}: ${msg.content.substring(0, 100)}`,
+                        channelId: msg.channelId,
+                        userId: msg.userId,
+                        messageId: msg.id,
+                        actionUrl: `/channel/${channelId}`
+                      })
+                    })
+                  }
+                  
+                  // Check for replies to current user's messages
+                  if (msg.replyTo) {
+                    const originalMessage = state.messages[channelId]?.find(m => m.id === msg.replyTo)
+                    if (originalMessage?.userId === currentUser?.id) {
+                      import('./notification-store').then(({ useNotificationStore }) => {
+                        const { addNotification } = useNotificationStore.getState()
+                        addNotification({
+                          type: 'reply',
+                          title: `Someone replied to your message`,
+                          message: `In #${state.channels.find(c => c.id === channelId)?.name || 'channel'}: ${msg.content.substring(0, 100)}`,
+                          channelId: msg.channelId,
+                          userId: msg.userId,
+                          messageId: msg.id,
+                          actionUrl: `/channel/${channelId}`
+                        })
+                      })
+                    }
+                  }
+                })
+
+                // Clear agent typing indicator and replace with real messages
+                set(state => ({
+                  messages: {
+                    ...state.messages,
+                    [channelId]: transformedMessages.filter(msg => !msg.isTyping)
+                  },
+                  agentTyping: {
+                    ...state.agentTyping,
+                    [channelId]: { agentName: state.agentTyping[channelId]?.agentName || 'AI Agent', isTyping: false }
+                  }
+                }))
+                
+                return updatedMessages.length
+              }
+              return 0
+            }
+            
+            // 5. Poll for AI agent response
+            let attempts = 0
+            const maxAttempts = 10
+            const pollInterval = 2000 // 2 seconds
+            
+            const pollForResponse = async () => {
+              attempts++
+              const messageCount = await refreshMessages()
+              
+              // If we found an AI response or reached max attempts, stop polling
+              if (messageCount > 1 || attempts >= maxAttempts) {
+                console.log(`AI agent response polling completed. Attempts: ${attempts}, Messages: ${messageCount}`)
+                return
+              }
+              
+              // Continue polling
+              setTimeout(pollForResponse, pollInterval)
+            }
+            
+            // Start polling after a short delay
+            setTimeout(pollForResponse, 1000)
+            
+            // Clear typing indicator after max time regardless
+            setTimeout(() => {
+              set(state => ({
+                agentTyping: {
+                  ...state.agentTyping,
+                  [channelId]: { agentName: state.agentTyping[channelId]?.agentName || 'AI Agent', isTyping: false }
+                }
+              }))
+            }, maxAttempts * pollInterval)
+          } else {
+            console.warn('API response not ok:', response.status, response.statusText)
+            throw new Error(`Backend returned ${response.status}: Failed to send message`)
+          }
+          
+          // Check if this is CEO channel and call real API
+          if (agentName === 'ARTAC CEO') {
+            // Call real CEO API
+            setTimeout(async () => {
+              try {
+                const response = await fetch('http://localhost:8000/api/v1/ceo/chat', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    message: content,
+                    user_id: currentUser.id
+                  })
+                })
+                
+                if (response.ok) {
+                  const data = await response.json()
+                  const aiResponse: Message = {
+                    id: `ai-${Date.now()}`,
+                    channelId,
+                    userId: 'ceo-001',
+                    content: data.message,
+                    type: 'text',
+                    timestamp: new Date(),
+                    mentions: [],
+                    reactions: [],
+                    metadata: data.project_data ? { projectData: data.project_data } : undefined
+                  }
+                  
+                  set(state => ({
+                    messages: {
+                      ...state.messages,
+                      [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                    },
+                    agentTyping: {
+                      ...state.agentTyping,
+                      [channelId]: { agentName: agentName, isTyping: false }
+                    }
+                  }))
+                } else {
+                  console.error('CEO API call failed:', response.statusText)
+                  // Fallback to mock response
+                  const aiResponse = generateMockAIResponse(content, channelId, currentAgentName)
+                  if (aiResponse) {
+                    set(state => ({
+                      messages: {
+                        ...state.messages,
+                        [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                      },
+                      agentTyping: {
+                        ...state.agentTyping,
+                        [channelId]: { agentName: currentAgentName, isTyping: false }
+                      }
+                    }))
+                  }
+                }
+              } catch (error) {
+                console.error('CEO API error:', error)
+                // Fallback to mock response
+                const aiResponse = generateMockAIResponse(content, channelId, currentAgentName)
+                if (aiResponse) {
+                  set(state => ({
+                    messages: {
+                      ...state.messages,
+                      [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                    },
+                    agentTyping: {
+                      ...state.agentTyping,
+                      [channelId]: { agentName: agentName, isTyping: false }
+                    }
+                  }))
+                }
+              }
+            }, 1500)
+          } else {
+            // Use mock responses for other agents
+            setTimeout(() => {
+              const currentState = get()
+              const currentAgentName = currentState.agentTyping[channelId]?.agentName || 'AI Agent'
+              const aiResponse = generateMockAIResponse(content, channelId, currentAgentName)
+              if (aiResponse) {
+                set(state => ({
+                  messages: {
+                    ...state.messages,
+                    [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                  }
+                }))
+              }
+            }, 2000) // 2 second delay for mock AI response
+          }
+        } catch (error) {
+          console.warn('Failed to send message:', error)
+          
+          // Clear typing indicator
+          set(state => ({
+            agentTyping: {
+              ...state.agentTyping,
+              [channelId]: { agentName: state.agentTyping[channelId]?.agentName || 'AI Agent', isTyping: false }
+            }
+          }))
+          
+          // Show offline mode mock response
+          setTimeout(() => {
+            const aiResponse = generateMockAIResponse(content, channelId, agentName)
+            if (aiResponse) {
+              set(state => ({
+                messages: {
+                  ...state.messages,
+                  [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                }
+              }))
+            }
+          }, 2000)
         }
       },
 
@@ -701,58 +1115,153 @@ export const useCommunicationStore = create<CommunicationStore>()(
 
       // Utility functions
       fetchData: async () => {
-        set({ isLoading: true })
+        set({ isLoading: true, error: null })
+        
+        console.log('Communication store: Attempting to fetch data from backend...')
+        
         try {
-          // Fetch real data from API
-          const channelsResponse = await fetch('http://localhost:8000/api/v1/communication/channels')
-          const channelsData = await channelsResponse.json()
+          // Try to fetch real data from API with timeout
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
           
-          // Load messages for CEO channel
-          const ceoChannel = channelsData.find((c: any) => c.id === 'channel-ceo')
-          let messagesData: Record<string, Message[]> = {}
+          const channelsResponse = await fetch('http://localhost:8000/api/v1/communication/channels', {
+            signal: controller.signal,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          })
           
-          if (ceoChannel) {
-            const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/channel-ceo/messages`)
-            const ceoMessages = await messagesResponse.json()
-            
-            // Transform API response to match frontend Message interface
-            const transformedMessages = ceoMessages.map((msg: any) => ({
-              id: msg.id,
-              channelId: msg.channel_id,
-              userId: msg.user_id,
-              content: msg.content,
-              type: 'text',
-              timestamp: new Date(msg.timestamp),
-              mentions: msg.mentions || [],
-              reactions: [],
-              isPinned: false,
-              replyTo: msg.reply_to
-            }))
-            
-            messagesData['channel-ceo'] = transformedMessages
+          clearTimeout(timeoutId)
+          
+          if (!channelsResponse.ok) {
+            throw new Error(`Backend returned ${channelsResponse.status}: ${channelsResponse.statusText}`)
           }
           
-          // Keep existing mock data for other functionality
-          const mockData = generateMockData()
+          const channelsData = await channelsResponse.json()
+          console.log('Successfully fetched channels from backend:', channelsData.length)
           
-          // Merge real channels with mock data
-          const allChannels = [
-            ...channelsData,
-            ...mockData.channels.filter((mc: any) => !channelsData.find((rc: any) => rc.id === mc.id))
+          // Load messages for all channels from backend
+          let messagesData: Record<string, Message[]> = {}
+          
+          for (const channel of channelsData) {
+            try {
+              const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/${channel.id}/messages`, {
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+                }
+              })
+              
+              if (messagesResponse.ok) {
+                const channelMessages = await messagesResponse.json()
+                console.log(`Successfully fetched ${channelMessages.length} messages for channel ${channel.id}`)
+                
+                // Transform API response to match frontend Message interface
+                const transformedMessages = channelMessages.map((msg: any) => ({
+                  id: msg.id,
+                  channelId: msg.channel_id,
+                  userId: msg.user_id,
+                  content: msg.content,
+                  type: 'text',
+                  timestamp: new Date(msg.timestamp),
+                  mentions: msg.mentions || [],
+                  reactions: [],
+                  isPinned: false,
+                  replyTo: msg.reply_to
+                }))
+                
+                messagesData[channel.id] = transformedMessages
+              } else {
+                // Initialize empty messages for channels with no messages
+                messagesData[channel.id] = []
+              }
+            } catch (msgError) {
+              console.warn(`Failed to fetch messages for channel ${channel.id}:`, msgError)
+              messagesData[channel.id] = []
+            }
+          }
+          
+          // Get active agents for users
+          let realUsers: User[] = [
+            {
+              id: 'current-user',
+              name: 'User',
+              role: 'User',
+              status: 'online',
+              avatar: '👤'
+            }
           ]
           
+          try {
+            const agentsResponse = await fetch('http://localhost:8000/api/v1/communication/agents')
+            if (agentsResponse.ok) {
+              const agents = await agentsResponse.json()
+              const agentUsers = agents.map((agent: any) => ({
+                id: agent.id,
+                name: agent.name,
+                role: agent.role,
+                status: agent.claude_session?.active ? 'online' : 'idle',
+                avatar: agent.role === 'ceo' ? '👑' : 
+                       agent.role === 'cto' ? '🔧' :
+                       agent.role === 'developer' ? '💻' :
+                       agent.role === 'qa_engineer' ? '🧪' :
+                       agent.role === 'devops' ? '⚙️' : '🤖'
+              }))
+              realUsers = [...realUsers, ...agentUsers]
+              console.log(`Loaded ${agentUsers.length} active agents as users`)
+            }
+          } catch (agentError) {
+            console.warn('Failed to fetch agents:', agentError)
+          }
+          
+          // Transform channels for frontend
+          const transformedChannels = channelsData.map((channel: any) => ({
+            id: channel.id,
+            name: channel.name,
+            description: channel.description,
+            type: channel.type as 'public' | 'private',
+            members: realUsers.map(u => u.id), // Add all users to public channels
+            createdBy: 'system',
+            createdAt: new Date(channel.created_at || new Date()),
+            unreadCount: channel.unread_count || 0,
+            avatar: channel.id === 'ceo' ? '👑' : 
+                   channel.type === 'project' ? '🎯' : 
+                   channel.id === 'general' ? '💬' : 
+                   channel.id === 'development' ? '💻' :
+                   channel.id === 'leadership' ? '🏢' : '📁'
+          }))
+          
+          console.log('🎉 Communication store: Connected to backend successfully ✅')
+          console.log('📊 USING ONLY REAL DATA - NO MOCK DATA!')
+          console.log(`📋 Loaded ${transformedChannels.length} real channels`)
+          console.log(`👥 Loaded ${realUsers.length} real users`) 
+          console.log(`💬 Loaded ${Object.keys(messagesData).length} channels with messages`)
+          
+          // Filter channels for Home organization (base channels only)
+          const homeChannels = transformedChannels.filter(channel => 
+            !channel.id.startsWith('project-') // Home shows non-project channels
+          )
+          
           set({
-            users: mockData.users,
-            channels: allChannels,
-            messages: { ...mockData.messages, ...messagesData },
-            memos: mockData.memos,
-            currentUser: mockData.users.find(u => u.id === 'current-user') || mockData.users[0], // Set current-user as active user
-            activeChannel: ceoChannel ? ceoChannel.id : mockData.channels[0].id,
-            isLoading: false
+            users: realUsers,
+            allChannels: transformedChannels, // Store all channels
+            channels: homeChannels, // Show only Home channels initially
+            messages: messagesData,
+            memos: [], // No mock memos when backend is available
+            currentUser: realUsers.find(u => u.id === 'current-user') || realUsers[0],
+            activeChannel: 'ceo', // Use real CEO channel ID
+            isLoading: false,
+            error: null
           })
+          
+          console.log(`🏠 Home organization: Showing ${homeChannels.length} base channels`)
+          
         } catch (error) {
-          console.error('Failed to load communication data:', error)
-          // Fallback to mock data
+          console.warn('Communication store: Backend unavailable, using offline mode ⚠️')
+          console.warn('Error details:', error)
+          
+          // Only use mock data when backend is completely unavailable
           const mockData = generateMockData()
           set({
             users: mockData.users,
@@ -760,9 +1269,9 @@ export const useCommunicationStore = create<CommunicationStore>()(
             messages: mockData.messages,
             memos: mockData.memos,
             currentUser: mockData.users.find(u => u.id === 'current-user') || mockData.users[0],
-            activeChannel: mockData.channels[0].id,
+            activeChannel: 'channel-ceo',
             isLoading: false,
-            error: 'Using offline mode'
+            error: 'Offline Mode - Backend unavailable'
           })
         }
       },
@@ -780,6 +1289,126 @@ export const useCommunicationStore = create<CommunicationStore>()(
       getUnreadCount: () => {
         const { channels } = get()
         return channels.reduce((total, channel) => total + (channel.unreadCount || 0), 0)
+      },
+
+      // Real API integration methods
+      checkBackendConnection: async () => {
+        try {
+          const response = await fetch('http://localhost:8000/api/v1/communication/agents')
+          return response.ok
+        } catch {
+          return false
+        }
+      },
+
+      loadChannels: async () => {
+        try {
+          const response = await fetch('http://localhost:8000/api/v1/communication/channels')
+          if (response.ok) {
+            const channels = await response.json()
+            set({ 
+              channels: channels.map((channel: any) => ({
+                id: channel.id,
+                name: channel.name,
+                description: channel.description,
+                type: channel.type as 'public' | 'private',
+                unreadCount: channel.unread_count || 0,
+                lastActivity: new Date(),
+                avatar: channel.id === 'ceo' ? '👑' : 
+                       channel.type === 'project' ? '🎯' : 
+                       channel.id === 'general' ? '💬' : '📁'
+              }))
+            })
+          }
+        } catch (error) {
+          console.error('Failed to load channels:', error)
+        }
+      },
+
+      loadMessages: async (channelId: string) => {
+        console.log('Loading messages for channel:', channelId)
+        try {
+          const response = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`)
+          if (response.ok) {
+            const messages = await response.json()
+            set(state => ({
+              messages: {
+                ...state.messages,
+                [channelId]: messages.map((msg: any) => ({
+                  id: msg.id,
+                  channelId: msg.channel_id,
+                  userId: msg.user_id,
+                  content: msg.content,
+                  type: 'text' as const,
+                  timestamp: new Date(msg.timestamp),
+                  mentions: msg.mentions || [],
+                  reactions: []
+                }))
+              }
+            }))
+          }
+        } catch (error) {
+          console.error('Failed to load messages:', error)
+        }
+      },
+
+      // Initialize store with real data when backend is available
+      initialize: async () => {
+        const isBackendOnline = await get().checkBackendConnection()
+        if (isBackendOnline) {
+          console.log('Backend is online - loading ONLY real data (no mock data)')
+          // Use fetchData which now loads only real data when backend is available
+          await get().fetchData()
+        } else {
+          console.log('Backend is offline - using mock data as fallback')
+          const mockData = generateMockData()
+          set({
+            users: mockData.users,
+            channels: mockData.channels,
+            messages: mockData.messages,
+            memos: mockData.memos,
+            currentUser: mockData.users.find(u => u.id === 'current-user') || mockData.users[0],
+            activeChannel: 'channel-ceo',
+            isLoading: false,
+            error: 'Offline Mode - Backend unavailable'
+          })
+        }
+      },
+
+      // Project-based channel filtering methods
+      filterChannelsForProject: (projectId: string | null) => {
+        const { allChannels } = get()
+        
+        if (projectId === null) {
+          // Home organization - show base channels only
+          const homeChannels = allChannels.filter(channel => 
+            !channel.id.startsWith('project-')
+          )
+          set({ channels: homeChannels, activeChannel: 'ceo' })
+          console.log(`🏠 Switched to Home: ${homeChannels.length} base channels`)
+        } else {
+          // Project organization - show only that project's channels
+          const projectChannels = allChannels.filter(channel => 
+            channel.id === projectId || channel.id.startsWith(`${projectId}-`)
+          )
+          set({ 
+            channels: projectChannels, 
+            activeChannel: projectChannels[0]?.id || null
+          })
+          console.log(`🎯 Switched to project ${projectId}: ${projectChannels.length} channels`)
+        }
+      },
+
+      getHomeChannels: () => {
+        const { allChannels } = get()
+        return allChannels.filter(channel => !channel.id.startsWith('project-'))
+      },
+
+      getProjectChannels: (projectId: string) => {
+        const { allChannels } = get()
+        return allChannels.filter(channel => 
+          channel.id === projectId || channel.id.startsWith(`${projectId}-`)
+        )
       }
     }),
     {

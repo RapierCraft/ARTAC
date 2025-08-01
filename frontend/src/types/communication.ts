@@ -45,6 +45,7 @@ export interface Message {
   reactions: Reaction[]
   attachments?: Attachment[]
   isPinned?: boolean
+  isTyping?: boolean // For typing indicators
 }
 
 export interface Reaction {

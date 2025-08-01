@@ -62,20 +62,42 @@ RUN pip install --no-cache-dir \
     passlib[bcrypt]==1.7.4 \
     python-multipart==0.0.20
 
+# Install collaboration system dependencies first
+RUN pip install --no-cache-dir --timeout 300 \
+    aiosqlite==0.20.0 \
+    numpy==2.0.0
+
+# Install ML packages in small batches to avoid timeouts
+# Use --retries and --timeout to handle network issues
+RUN pip install --no-cache-dir --timeout 600 --retries 3 faiss-cpu==1.9.0
+RUN pip install --no-cache-dir --timeout 600 --retries 3 sentence-transformers==5.0.0
+
 # Install voice processing packages
 RUN pip install --no-cache-dir --timeout 300 \
     elevenlabs==2.8.1 \
-    openai-whisper==20250625 \
-    pydub==0.25.1 \
-    numpy==2.0.0
+    pydub==0.25.1
+
+# Install whisper separately as it's large and can timeout
+RUN pip install --no-cache-dir --timeout 1200 --retries 2 openai-whisper==20250625
 
 # Copy application code
 COPY . .
 
 # Create non-root user for security with same UID as host user
 RUN useradd --create-home --shell /bin/bash --uid 1000 artac
+
+# Set up Claude CLI configuration directory with proper permissions
+RUN mkdir -p /home/artac/.claude && chown -R artac:artac /home/artac/.claude
+
+# Copy and run setup script as root before switching user
+COPY scripts/setup_claude_auth.sh /tmp/setup_claude_auth.sh
+RUN chmod +x /tmp/setup_claude_auth.sh
+
 RUN chown -R artac:artac /app
 USER artac
+
+# Set Claude home directory
+ENV CLAUDE_HOME=/home/artac/.claude
 
 # Expose port
 EXPOSE 8000

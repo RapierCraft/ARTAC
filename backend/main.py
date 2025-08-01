@@ -46,6 +46,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await database.connect()
     logger.info("✅ Database connected")
     
+    # Initialize collaboration service databases
+    try:
+        from services.interaction_logger import interaction_logger
+        from services.task_hierarchy_manager import task_hierarchy_manager
+        from services.stateless_rag_manager import stateless_rag_manager
+        
+        if database.is_connected:
+            await interaction_logger._initialize_database()
+            await task_hierarchy_manager._initialize_database()
+            await stateless_rag_manager._initialize_database()
+            logger.info("✅ Collaboration databases initialized")
+    except Exception as e:
+        logger.warning(f"Collaboration databases not initialized: {e}")
+    
     # Initialize services
     app.state.agent_manager = AgentManager()
     app.state.rag_service = SmartRAGService()
@@ -58,6 +72,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     await app.state.agent_manager.initialize()
     logger.info("✅ Agent manager initialized")
+    
+    # Initialize CEO service
+    from services.ceo_service import initialize_ceo_service
+    app.state.ceo_service = initialize_ceo_service(app.state.agent_manager)
+    logger.info("✅ CEO service initialized - Ready to manage projects and hire agents")
     
     # Initialize Ollama (non-blocking - continue if it fails)
     try:

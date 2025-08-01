@@ -99,24 +99,33 @@ class InterAgentCommunicationService:
         """Create default team conversation channels"""
         default_teams = [
             {
-                "name": "All Hands",
+                "id": "general",
+                "name": "General",
                 "description": "Company-wide announcements and discussions",
                 "members": []  # Will be populated as agents join
             },
             {
+                "id": "ceo", 
+                "name": "CEO Channel",
+                "description": "Direct communication with the CEO",
+                "members": []
+            },
+            {
+                "id": "development",
                 "name": "Development Team",
                 "description": "Development and engineering discussions",
                 "members": []
             },
             {
-                "name": "Leadership Team",
+                "id": "leadership",
+                "name": "Leadership Team", 
                 "description": "Executive and management discussions",
                 "members": []
             }
         ]
         
         for team_info in default_teams:
-            team_id = str(uuid.uuid4())
+            team_id = team_info["id"]
             team = TeamConversation(
                 id=team_id,
                 name=team_info["name"],
@@ -126,17 +135,37 @@ class InterAgentCommunicationService:
             )
             self.team_conversations[team_id] = team
     
-    async def send_direct_message(self, from_agent_id: str, to_agent_id: str, 
-                                subject: str, content: str, 
-                                priority: MessagePriority = MessagePriority.NORMAL,
-                                metadata: Dict[str, Any] = None) -> str:
+    async def send_direct_message(self, from_agent_id: str = None, to_agent_id: str = None, 
+                                content: str = None,
+                                subject: str = "Direct Message", 
+                                priority = MessagePriority.NORMAL,
+                                metadata: Dict[str, Any] = None,
+                                # Alternative parameter names for compatibility
+                                from_agent: str = None, to_agent: str = None) -> str:
         """Send a direct message between two agents"""
+        # Handle both parameter styles for compatibility
+        sender_id = from_agent_id or from_agent
+        recipient_id = to_agent_id or to_agent
+        
+        if not sender_id or not recipient_id or not content:
+            raise ValueError("from_agent_id/from_agent, to_agent_id/to_agent, and content are required")
+        
+        # Handle priority parameter that might be string or enum
+        if isinstance(priority, str):
+            priority_map = {
+                "low": MessagePriority.LOW,
+                "normal": MessagePriority.NORMAL, 
+                "high": MessagePriority.HIGH,
+                "urgent": MessagePriority.URGENT
+            }
+            priority = priority_map.get(priority.lower(), MessagePriority.NORMAL)
+        
         message_id = str(uuid.uuid4())
         
         message = AgentMessage(
             id=message_id,
-            from_agent_id=from_agent_id,
-            to_agent_id=to_agent_id,
+            from_agent_id=sender_id,
+            to_agent_id=recipient_id,
             message_type=MessageType.DIRECT,
             priority=priority,
             subject=subject,
@@ -147,12 +176,12 @@ class InterAgentCommunicationService:
         self.messages[message_id] = message
         
         # Trigger message received event for recipient
-        await self._notify_agent_message_received(to_agent_id, message)
+        await self._notify_agent_message_received(recipient_id, message)
         
         logger.log_system_event("direct_message_sent", {
             "message_id": message_id,
-            "from_agent": from_agent_id,
-            "to_agent": to_agent_id,
+            "from_agent": sender_id,
+            "to_agent": recipient_id,
             "priority": priority.value
         })
         
@@ -166,8 +195,9 @@ class InterAgentCommunicationService:
             raise ValueError(f"Team {team_id} not found")
         
         team = self.team_conversations[team_id]
+        # Auto-add sender to team if not already a member (for system agents like CEO)
         if from_agent_id not in team.team_members:
-            raise ValueError(f"Agent {from_agent_id} is not a member of team {team_id}")
+            team.team_members.append(from_agent_id)
         
         message_id = str(uuid.uuid4())
         
@@ -482,6 +512,99 @@ class InterAgentCommunicationService:
             return False
         
         return agent_id in self.team_conversations[team_id].team_members
+
+    # Additional methods for communication API compatibility
+    async def create_channel(self, channel_id: str, name: str, description: str, channel_type: str = "public") -> str:
+        """Create a new communication channel"""
+        # Create team conversation with the specified channel_id
+        from datetime import datetime
+        team = TeamConversation(
+            id=channel_id,
+            name=name,
+            description=description,
+            team_members=[],
+            created_by="system",
+            created_at=datetime.now(),
+            last_activity=datetime.now(),
+            active=True
+        )
+        
+        self.team_conversations[channel_id] = team
+        
+        logger.log_system_event("channel_created", {
+            "channel_id": channel_id,
+            "name": name,
+            "type": channel_type
+        })
+        
+        return channel_id
+
+    async def get_all_channels(self) -> List[Dict[str, Any]]:
+        """Get all available channels"""
+        channels = []
+        for team_id, team in self.team_conversations.items():
+            channels.append({
+                "id": team_id,
+                "name": team.name,
+                "description": team.description,
+                "type": "public",
+                "created_at": team.created_at,
+                "last_activity": team.last_activity
+            })
+        return channels
+
+    async def get_channel_messages(self, channel_id: str) -> List[Dict[str, Any]]:
+        """Get messages for a specific channel"""
+        messages = []
+        for message_id, message in self.messages.items():
+            if (message.message_type == MessageType.TEAM_CHAT and 
+                hasattr(message, 'team_id') and message.team_id == channel_id):
+                messages.append({
+                    "id": message.id,
+                    "channel_id": channel_id,
+                    "sender_id": message.from_agent_id,
+                    "sender_name": f"Agent {message.from_agent_id}",
+                    "content": message.content,
+                    "timestamp": message.timestamp,
+                    "mentions": getattr(message, 'mentions', [])
+                })
+        return sorted(messages, key=lambda x: x['timestamp'])
+
+    async def send_message(self, channel_id: str, sender_id: str, sender_name: str, 
+                          content: str, mentions: List[str] = None, reply_to: str = None,
+                          message_type: str = "team_chat") -> str:
+        """Send a message to a channel"""
+        # Use team message for channel communication
+        message_id = await self.send_team_message(
+            from_agent_id=sender_id,
+            team_id=channel_id,
+            subject="Message",
+            content=content,
+            priority=MessagePriority.NORMAL
+        )
+        return message_id
+
+    async def get_unread_count(self, channel_id: str) -> int:
+        """Get unread message count for a channel"""
+        # Simplified - return 0 for now
+        return 0
+
+    # Compatibility method for different method signatures
+    async def send_direct_message_alt(self, from_agent: str, to_agent: str, content: str, priority: str = "high") -> str:
+        """Alternative signature for send_direct_message"""
+        priority_map = {
+            "low": MessagePriority.LOW,
+            "normal": MessagePriority.NORMAL, 
+            "high": MessagePriority.HIGH,
+            "urgent": MessagePriority.URGENT
+        }
+        
+        return await self.send_direct_message(
+            from_agent_id=from_agent,
+            to_agent_id=to_agent,
+            content=content,
+            priority=priority_map.get(priority, MessagePriority.NORMAL)
+        )
 
 
 # Global service instance

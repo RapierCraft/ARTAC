@@ -9,9 +9,10 @@ import { formatDate } from '@/lib/utils'
 
 interface MessageListProps {
   channelId: string
+  onReply?: (messageId: string) => void
 }
 
-export function MessageList({ channelId }: MessageListProps) {
+export function MessageList({ channelId, onReply }: MessageListProps) {
   const { messages, users } = useCommunicationStore()
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -84,6 +85,8 @@ export function MessageList({ channelId }: MessageListProps) {
                       message={message}
                       user={users.find(u => u.id === message.userId)}
                       isGrouped={isGrouped}
+                      allMessages={channelMessages}
+                      onReply={onReply}
                     />
                   </motion.div>
                 )

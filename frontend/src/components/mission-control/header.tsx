@@ -23,6 +23,8 @@ import { SystemStatusIndicator } from './system-status'
 import { useSystemStore } from '@/stores/system-store'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { NotificationBell } from '@/components/notifications/notification-bell'
+import { SettingsPanel } from '@/components/settings/settings-panel'
 import Link from 'next/link'
 
 interface HeaderProps {
@@ -131,17 +133,7 @@ export function Header({
           </Link>
 
           {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="relative text-muted-foreground hover:text-foreground flex items-center gap-2"
-          >
-            <Bell className="h-4 w-4" />
-            <div className="flex items-center gap-1">
-              <div className="h-1.5 w-1.5 bg-destructive rounded-full" />
-              <span className="text-xs">3</span>
-            </div>
-          </Button>
+          <NotificationBell />
 
           {/* Refresh Button */}
           <Button
@@ -171,13 +163,7 @@ export function Header({
           </Button>
 
           {/* Settings */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
+          <SettingsPanel />
 
           {/* Right Panel Toggle */}
           <Button

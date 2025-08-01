@@ -12,7 +12,8 @@ import {
   Search,
   Hash,
   Lock,
-  MessageSquare
+  MessageSquare,
+  Reply
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,11 +37,13 @@ export function ChatArea() {
     sendMessage,
     toggleUserList,
     showUserList,
-    markChannelAsRead
+    markChannelAsRead,
+    agentTyping,
+    messages
   } = useCommunicationStore()
 
   const [messageInput, setMessageInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const currentChannel = channels.find(c => c.id === activeChannel)
@@ -56,10 +59,19 @@ export function ChatArea() {
 
     // Extract mentions (@username)
     const mentions = messageInput.match(/@(\w+)/g)?.map(m => m.slice(1)) || []
+    
+    // Store message content before clearing
+    const messageContent = messageInput
 
-    await sendMessage(activeChannel, messageInput, mentions)
+    // Clear input immediately for better UX
     setMessageInput('')
     inputRef.current?.focus()
+
+    // Send message with stored content
+    await sendMessage(activeChannel, messageContent, mentions, replyingTo || undefined)
+    
+    // Clear reply context after sending
+    setReplyingTo(null)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -71,13 +83,22 @@ export function ChatArea() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessageInput(e.target.value)
-    
-    // Simulate typing indicator
-    if (!isTyping) {
-      setIsTyping(true)
-      setTimeout(() => setIsTyping(false), 2000)
-    }
   }
+
+  const handleReply = (messageId: string) => {
+    setReplyingTo(messageId)
+    inputRef.current?.focus()
+  }
+
+  const cancelReply = () => {
+    setReplyingTo(null)
+  }
+
+  // Get the message being replied to
+  const replyingToMessage = replyingTo ? (messages[activeChannel] || []).find(m => m.id === replyingTo) : null
+  
+  // Get agent typing info for current channel
+  const currentAgentTyping = activeChannel ? agentTyping[activeChannel] : null
 
   if (!currentChannel) {
     return (
@@ -92,9 +113,9 @@ export function ChatArea() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Channel Header */}
-      <div className="h-16 border-b border-border bg-muted/20 flex items-center justify-between px-4">
+      <div className="h-16 border-b border-border bg-muted/20 flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
             {currentChannel.type === 'public' && <Hash className="h-5 w-5 text-muted-foreground" />}
@@ -124,7 +145,7 @@ export function ChatArea() {
           >
             <Users className="h-4 w-4" />
             <span className="ml-2 hidden sm:inline">
-              {currentChannel.members.length}
+              {currentChannel?.members?.length || 0}
             </span>
           </Button>
 
@@ -158,33 +179,56 @@ export function ChatArea() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-hidden">
-        <MessageList channelId={activeChannel} />
+      <div className="flex-1 overflow-hidden min-h-0">
+        <MessageList channelId={activeChannel} onReply={handleReply} />
       </div>
 
-      {/* Typing Indicators */}
+      {/* Agent Typing Indicator */}
       <AnimatePresence>
-        {isTyping && (
+        {currentAgentTyping?.isTyping && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="px-4 py-2 border-t border-border bg-muted/10"
+            className="px-4 py-2 border-t border-border flex-shrink-0"
           >
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <span className="inline-block w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="inline-block w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="inline-block w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-              <span>Someone is typing...</span>
+              <span>{currentAgentTyping.agentName} is typing...</span>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Reply Context */}
+      {replyingToMessage && (
+        <div className="px-4 py-2 border-t border-border bg-muted/20 flex-shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-2 text-sm">
+              <Reply className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div>
+                <span className="text-muted-foreground">Replying to </span>
+                <span className="font-medium">User</span>
+                <div className="text-xs text-muted-foreground truncate max-w-xs">
+                  {replyingToMessage.content.length > 50 
+                    ? `${replyingToMessage.content.substring(0, 50)}...` 
+                    : replyingToMessage.content}
+                </div>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={cancelReply}>
+              ×
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Message Input */}
-      <div className="p-4 border-t border-border bg-background">
+      <div className="p-4 border-t border-border bg-background flex-shrink-0">
         <div className="flex items-end space-x-3">
           <Button variant="ghost" size="sm">
             <Paperclip className="h-4 w-4" />

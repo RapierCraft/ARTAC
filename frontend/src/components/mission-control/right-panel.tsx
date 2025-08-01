@@ -42,7 +42,8 @@ export function RightPanel() {
   // Auto-select CEO channel when available
   useEffect(() => {
     const ceoChannel = channels.find(c => c.id === 'channel-ceo')
-    if (ceoChannel && !activeChannel) {
+    if (ceoChannel && (!activeChannel || activeChannel === 'channel-general')) {
+      console.log('Auto-selecting CEO channel:', ceoChannel.id)
       setActiveChannel(ceoChannel.id)
     }
   }, [channels, activeChannel, setActiveChannel])
@@ -72,21 +73,41 @@ export function RightPanel() {
   const currentMessages = activeChannel ? messages[activeChannel] || [] : []
 
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !activeChannel) return
+  const [isSending, setIsSending] = useState(false)
 
-    // Add mentions for selected executives
-    const mentions = selectedExecutive ? [selectedExecutive] : []
-    const content = selectedExecutive 
-      ? `@${executives.find(e => e.id === selectedExecutive)?.name} ${messageInput}`
-      : messageInput
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !activeChannel || isSending) return
+
+    setIsSending(true)
+
+    // Parse mentions from message content
+    const mentionRegex = /@(CEO|CTO|CSO|CFO)/gi
+    const mentionMatches = messageInput.match(mentionRegex) || []
+    const mentions = mentionMatches.map(match => {
+      const name = match.substring(1).toLowerCase() // Remove @ and lowercase
+      return executives.find(e => e.name.toLowerCase() === name)?.id
+    }).filter(Boolean)
+
+    // Add selectedExecutive if not already in mentions
+    if (selectedExecutive && !mentions.includes(selectedExecutive)) {
+      mentions.push(selectedExecutive)
+    }
+
+    const content = messageInput
+
+    // Clear input immediately when user sends message
+    setMessageInput('')
+    setSelectedExecutive(null)
 
     try {
+      console.log('Sending message:', { content, mentions, activeChannel })
       await sendMessage(activeChannel, content, mentions)
-      setMessageInput('')
-      setSelectedExecutive(null)
     } catch (error) {
       console.error('Failed to send message:', error)
+      // If sending fails, restore the message so user can retry
+      setMessageInput(content)
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -101,13 +122,24 @@ export function RightPanel() {
     const value = e.target.value
     setMessageInput(value)
 
-    // Check for @ mentions
+    // Check for @ mentions - look for complete matches first, then partial
     const lastAtIndex = value.lastIndexOf('@')
     if (lastAtIndex !== -1) {
-      const mention = value.slice(lastAtIndex + 1).toLowerCase()
-      const exec = executives.find(e => e.name.toLowerCase().startsWith(mention))
+      const mentionText = value.slice(lastAtIndex + 1)
+      const mentionLower = mentionText.toLowerCase()
+      
+      // First check for exact matches
+      let exec = executives.find(e => e.name.toLowerCase() === mentionLower)
+      
+      // If no exact match, check for partial matches
+      if (!exec && mentionText.length > 0) {
+        exec = executives.find(e => e.name.toLowerCase().startsWith(mentionLower))
+      }
+      
       if (exec) {
         setSelectedExecutive(exec.id)
+      } else {
+        setSelectedExecutive(null)
       }
     } else {
       setSelectedExecutive(null)

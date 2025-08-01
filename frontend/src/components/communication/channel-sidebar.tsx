@@ -16,7 +16,10 @@ import {
   MoreVertical,
   Hash as HashIcon,
   MessageSquare,
-  FileText
+  FileText,
+  Mic,
+  MicOff,
+  Headphones
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,6 +57,8 @@ export function ChannelSidebar() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateChannel, setShowCreateChannel] = useState(false)
+  const [isMicMuted, setIsMicMuted] = useState(false)
+  const [isDeafened, setIsDeafened] = useState(false)
 
   const filteredChannels = channels.filter(channel =>
     channel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -268,23 +273,68 @@ export function ChannelSidebar() {
 
       {/* User Status */}
       {currentUser && (
-        <div className="p-3 border-t border-border">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-sm font-medium">
-                {currentUser.avatar || currentUser.name.charAt(0)}
+        <div className="border-t border-border flex-shrink-0 bg-background">
+          <div className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className="relative">
+                  <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center text-base font-medium">
+                    {currentUser.avatar || currentUser.name.charAt(0)}
+                  </div>
+                  <div className={cn(
+                    "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background",
+                    currentUser.status === 'online' && "bg-green-500",
+                    currentUser.status === 'away' && "bg-yellow-500", 
+                    currentUser.status === 'busy' && "bg-red-500",
+                    currentUser.status === 'offline' && "bg-gray-500"
+                  )} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{currentUser.name}</div>
+                  <div className="text-xs text-muted-foreground capitalize">{currentUser.status}</div>
+                </div>
               </div>
-              <div className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
-                currentUser.status === 'online' && "bg-green-500",
-                currentUser.status === 'away' && "bg-yellow-500", 
-                currentUser.status === 'busy' && "bg-red-500",
-                currentUser.status === 'offline' && "bg-gray-500"
-              )} />
+              
+              {/* Voice and Settings Controls */}
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-8 w-8 p-0",
+                    isMicMuted && "bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                  )}
+                  onClick={() => setIsMicMuted(!isMicMuted)}
+                  title={isMicMuted ? "Unmute microphone" : "Mute microphone"}
+                >
+                  {isMicMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-8 w-8 p-0",
+                    isDeafened && "bg-gray-500/20 text-gray-500 hover:bg-gray-500/30"
+                  )}
+                  onClick={() => setIsDeafened(!isDeafened)}
+                  title={isDeafened ? "Undeafen" : "Deafen"}
+                >
+                  <Headphones className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="User settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{currentUser.name}</div>
-              <div className="text-xs text-muted-foreground capitalize">{currentUser.status}</div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              <strong>Online</strong> • Ready to collaborate
             </div>
           </div>
         </div>

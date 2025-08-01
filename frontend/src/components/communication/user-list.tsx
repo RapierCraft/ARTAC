@@ -8,7 +8,7 @@ export function UserList() {
   const { users, currentUser, channels, activeChannel } = useCommunicationStore()
 
   const currentChannel = channels.find(c => c.id === activeChannel)
-  const channelMembers = currentChannel 
+  const channelMembers = currentChannel?.members
     ? users.filter(user => currentChannel.members.includes(user.id))
     : users
 

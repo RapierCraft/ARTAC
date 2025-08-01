@@ -9,7 +9,8 @@ import {
   Edit2, 
   Trash2,
   Reply,
-  Smile
+  Smile,
+  CornerDownRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,14 +29,17 @@ import {
 import { useCommunicationStore } from '@/stores/communication-store'
 import { Message, User } from '@/types/communication'
 import { formatRelativeTime, cn } from '@/lib/utils'
+import { MarkdownMessage } from './markdown-message'
 
 interface MessageItemProps {
   message: Message
   user?: User
   isGrouped?: boolean
+  allMessages?: Message[]
+  onReply?: (messageId: string) => void
 }
 
-export function MessageItem({ message, user, isGrouped = false }: MessageItemProps) {
+export function MessageItem({ message, user, isGrouped = false, allMessages = [], onReply }: MessageItemProps) {
   const {
     currentUser,
     addReaction,
@@ -52,6 +56,11 @@ export function MessageItem({ message, user, isGrouped = false }: MessageItemPro
   const isOwn = currentUser?.id === message.userId
   const canEdit = isOwn && new Date().getTime() - new Date(message.timestamp).getTime() < 15 * 60 * 1000 // 15 minutes
   const canDelete = isOwn || currentUser?.role === 'CEO'
+  
+  // Find the replied-to message
+  const repliedToMessage = message.replyTo ? allMessages.find(m => m.id === message.replyTo) : null
+  const { users } = useCommunicationStore()
+  const repliedToUser = repliedToMessage ? users.find(u => u.id === repliedToMessage.userId) : null
 
   const handleReaction = async (emoji: string) => {
     const existingReaction = message.reactions.find(r => r.emoji === emoji)
@@ -76,9 +85,10 @@ export function MessageItem({ message, user, isGrouped = false }: MessageItemPro
     }
   }
 
-  const renderMentions = (content: string) => {
-    return content.replace(/@(\w+)/g, '<span class="text-primary font-medium bg-primary/10 px-1 rounded">@$1</span>')
+  const handleReply = () => {
+    onReply?.(message.id)
   }
+
 
   const quickEmojis = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🎉']
 
@@ -153,11 +163,32 @@ export function MessageItem({ message, user, isGrouped = false }: MessageItemPro
             </div>
           )}
 
+          {/* Reply Context */}
+          {repliedToMessage && (
+            <div className="mb-2 flex items-start space-x-2 text-xs text-muted-foreground bg-muted/30 rounded p-2 border-l-2 border-muted-foreground/20">
+              <CornerDownRight className="h-3 w-3 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <span className="font-medium">{repliedToUser?.name}</span>
+                <div className="truncate max-w-xs">
+                  {repliedToMessage.content.length > 100 
+                    ? `${repliedToMessage.content.substring(0, 100)}...` 
+                    : repliedToMessage.content}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Message Text */}
-          <div 
-            className="text-sm text-foreground leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: renderMentions(message.content) }}
-          />
+          {message.isTyping ? (
+            <div className="text-sm leading-relaxed text-muted-foreground italic animate-pulse">
+              {message.content}
+            </div>
+          ) : (
+            <MarkdownMessage 
+              content={message.content}
+              className="text-foreground"
+            />
+          )}
 
           {/* Thread Reply Indicator */}
           {message.replyTo && (
@@ -222,6 +253,10 @@ export function MessageItem({ message, user, isGrouped = false }: MessageItemPro
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleReply}>
+                  <Reply className="h-4 w-4 mr-2" />
+                  Reply
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleStartThread}>
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Start Thread
