@@ -35,6 +35,8 @@ import { Progress } from '@/components/ui/progress'
 import { BarChart, LineChart as CustomLineChart, DonutChart } from '@/components/ui/chart'
 import { useCommunicationStore } from '@/stores/communication-store'
 import { useProjectStore } from '@/stores/project-store'
+import { EnhancedMarkdown } from './enhanced-markdown'
+import { DirectMessageChat } from './direct-message-chat'
 
 interface ActivityItem {
   id: string
@@ -49,9 +51,46 @@ interface ActivityItem {
 export function VirtualOffice() {
   const { users, allChannels, messages, sendMessage } = useCommunicationStore()
   const { projects } = useProjectStore()
+  
+  // Stable values to prevent hydration mismatch
+  const [isClient, setIsClient] = useState(false)
+  const [stableRandomValues, setStableRandomValues] = useState({
+    tasksCompleted: 167,
+    agentPerformances: [] as number[],
+    agentTasks: [] as number[],
+    agentResponseTimes: [] as number[],
+    departmentStats: [] as any[],
+    projectProgress: [] as number[]
+  })
+
+  useEffect(() => {
+    setIsClient(true)
+    // Generate stable random values once on client
+    const agentCount = Math.max(6, users.length)
+    setStableRandomValues({
+      tasksCompleted: Math.floor(Math.random() * 50) + 147,
+      agentPerformances: Array.from({ length: agentCount }, () => 85 + Math.floor(Math.random() * 15)),
+      agentTasks: Array.from({ length: agentCount }, () => Math.floor(Math.random() * 8) + 12),
+      agentResponseTimes: Array.from({ length: agentCount }, () => (1.2 + Math.random() * 1.5)),
+      departmentStats: Array.from({ length: agentCount }, () => ({
+        tasksCount: Math.floor(Math.random() * 15) + 8,
+        efficiency: 85 + Math.floor(Math.random() * 15),
+        responseTime: 0.8 + Math.random() * 2.0,
+        satisfaction: 4.2 + Math.random() * 0.8,
+        trainingProgress: 70 + Math.floor(Math.random() * 30)
+      })),
+      projectProgress: Array.from({ length: 10 }, () => 75 + Math.floor(Math.random() * 20))
+    })
+  }, [])
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
-  const [ceoChatInput, setCeoChatInput] = useState('')
-  const [ceoMessages, setCeoMessages] = useState<any[]>([])
+  // Find the CEO agent for direct messaging
+  const ceoAgent = users.find(user => user.role === 'CEO' || user.id === 'ceo-001') || {
+    id: 'ceo-001',
+    name: 'ARTAC CEO',
+    role: 'CEO' as const,
+    status: 'online' as const,
+    avatar: '👔'
+  }
   const [systemMetrics, setSystemMetrics] = useState({
     cpu: 45,
     memory: 62,
@@ -59,11 +98,6 @@ export function VirtualOffice() {
     uptime: '7d 14h 23m'
   })
 
-  // Load CEO messages from the CEO channel
-  useEffect(() => {
-    const ceoChannelMessages = messages['ceo'] || []
-    setCeoMessages(ceoChannelMessages.slice(-5)) // Last 5 messages
-  }, [messages])
 
   // Generate recent activity from channels and messages
   useEffect(() => {
@@ -111,23 +145,12 @@ export function VirtualOffice() {
   const totalMessages = Object.values(messages).flat().length
   const projectChannels = allChannels.filter(channel => channel.id.startsWith('project-'))
 
-  // Handle CEO chat message
-  const handleCeoMessage = async () => {
-    if (!ceoChatInput.trim()) return
-    
-    try {
-      await sendMessage('ceo', ceoChatInput)
-      setCeoChatInput('')
-    } catch (error) {
-      console.error('Failed to send CEO message:', error)
-    }
-  }
 
   // Generate mock analytics data
   const analyticsData = {
     projectsThisWeek: projects.length,
     agentsHired: activeAgents.length,
-    tasksCompleted: Math.floor(Math.random() * 50) + 20,
+    tasksCompleted: isClient ? stableRandomValues.tasksCompleted - 120 : 47, // Consistent fallback
     systemUptime: 99.8
   }
 
@@ -321,7 +344,7 @@ export function VirtualOffice() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Tasks Completed</p>
-                  <p className="text-xl font-bold">{Math.floor(Math.random() * 50) + 147}</p>
+                  <p className="text-xl font-bold">{isClient ? stableRandomValues.tasksCompleted : 167}</p>
                   <p className="text-xs text-green-600 mt-1">+23% this week</p>
                 </div>
                 <CheckCircle className="h-6 w-6 text-green-500" />
@@ -597,9 +620,9 @@ export function VirtualOffice() {
               <CardContent>
                 <div className="space-y-3">
                   {activeAgents.slice(0, 6).map((agent, index) => {
-                    const performance = 85 + Math.floor(Math.random() * 15);
-                    const tasksCompleted = Math.floor(Math.random() * 8) + 12;
-                    const avgResponse = (1.2 + Math.random() * 1.5).toFixed(1);
+                    const performance = isClient && stableRandomValues.agentPerformances[index] ? stableRandomValues.agentPerformances[index] : 90;
+                    const tasksCompleted = isClient && stableRandomValues.agentTasks[index] ? stableRandomValues.agentTasks[index] : 15;
+                    const avgResponse = isClient && stableRandomValues.agentResponseTimes[index] ? stableRandomValues.agentResponseTimes[index].toFixed(1) : '1.8';
                     
                     return (
                       <div key={agent.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -656,11 +679,14 @@ export function VirtualOffice() {
                   {activeAgents.map((agent, index) => {
                     const departments = ['Customer Success', 'Technical Support', 'Sales Assistance', 'Quality Assurance'];
                     const department = departments[index % departments.length];
-                    const tasksCount = Math.floor(Math.random() * 15) + 8;
-                    const efficiency = 85 + Math.floor(Math.random() * 15);
-                    const responseTime = (0.8 + Math.random() * 2.0).toFixed(1);
-                    const satisfaction = (4.2 + Math.random() * 0.8).toFixed(1);
-                    const trainingProgress = 70 + Math.floor(Math.random() * 30);
+                    const stats = isClient && stableRandomValues.departmentStats[index] ? stableRandomValues.departmentStats[index] : {
+                      tasksCount: 12,
+                      efficiency: 92,
+                      responseTime: 1.5,
+                      satisfaction: 4.6,
+                      trainingProgress: 85
+                    };
+                    const { tasksCount, efficiency, responseTime, satisfaction, trainingProgress } = stats;
                     
                     return (
                       <tr key={agent.id} className="border-b hover:bg-muted/20">
@@ -693,10 +719,10 @@ export function VirtualOffice() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-2 text-center font-medium">{responseTime}s</td>
+                        <td className="py-3 px-2 text-center font-medium">{responseTime.toFixed(1)}s</td>
                         <td className="py-3 px-2 text-center">
                           <div className="flex items-center justify-center space-x-1">
-                            <span className="font-medium">{satisfaction}</span>
+                            <span className="font-medium">{satisfaction.toFixed(1)}</span>
                             <span className="text-yellow-500">★</span>
                           </div>
                         </td>
@@ -737,7 +763,7 @@ export function VirtualOffice() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-medium text-green-600">On Track</p>
-                        <p className="text-xs text-muted-foreground">{Math.floor(75 + Math.random() * 20)}% complete</p>
+                        <p className="text-xs text-muted-foreground">{isClient && stableRandomValues.projectProgress[0] ? stableRandomValues.projectProgress[0] : 85}% complete</p>
                       </div>
                     </div>
                   ))}
@@ -799,98 +825,14 @@ export function VirtualOffice() {
           </div>
         </div>
 
-        {/* Right Chat Section - Maximum prominence and better space utilization */}
-        <div className="w-80 xl:w-96 flex-shrink-0 border border-border rounded-lg bg-card/50 backdrop-blur-sm flex flex-col shadow-lg">
-        {/* CEO Chat - Enhanced Header */}
-        <div className="flex-1 flex flex-col">
-          <div className="p-4 border-b border-border bg-muted/20 rounded-t-lg">
-            <div className="flex items-center space-x-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-                  👑
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-base">ARTAC CEO</h3>
-                <div className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>Online • Executive Command</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chat Messages - Enhanced styling */}
-          <div className="flex-1 p-4 space-y-3 overflow-auto min-h-0">
-            {ceoMessages.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bot className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="font-medium">Chat with ARTAC CEO</p>
-                <p className="text-sm mt-1">Ask about projects, strategy, or organizational matters</p>
-              </div>
-            ) : (
-              ceoMessages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-end space-x-2 ${message.userId !== 'ceo-001' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.userId !== 'ceo-001' ? (
-                    // User message: bubble first, then avatar
-                    <>
-                      <div className="max-w-[80%] p-3 rounded-lg shadow-sm bg-primary text-primary-foreground rounded-br-sm">
-                        <p className="text-sm">{message.content}</p>
-                        <p className="text-xs opacity-70 mt-1">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <Avatar className="h-7 w-7 flex-shrink-0">
-                        <AvatarFallback className="text-xs bg-blue-500 text-white">
-                          {currentUser?.avatar || currentUser?.name?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    </>
-                  ) : (
-                    // CEO message: avatar first, then bubble
-                    <>
-                      <Avatar className="h-7 w-7 flex-shrink-0">
-                        <AvatarFallback className="text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-                          👑
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="max-w-[80%] p-3 rounded-lg shadow-sm bg-card border border-border rounded-bl-sm">
-                        <p className="text-sm">{message.content}</p>
-                        <p className="text-xs opacity-70 mt-1">
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </motion.div>
-              ))
-            )}
-          </div>
-
-          {/* Chat Input - Enhanced */}
-          <div className="p-4 border-t border-border bg-muted/20">
-            <div className="flex space-x-3">
-              <Input
-                value={ceoChatInput}
-                onChange={(e) => setCeoChatInput(e.target.value)}
-                placeholder="Message the CEO..."
-                onKeyPress={(e) => e.key === 'Enter' && handleCeoMessage()}
-                className="flex-1 bg-background"
-              />
-              <Button 
-                onClick={handleCeoMessage}
-                disabled={!ceoChatInput.trim()}
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+        {/* Right Chat Section - Fixed height with proper scrolling */}
+        <div className="w-80 xl:w-96 flex-shrink-0 border border-border rounded-lg bg-card/50 backdrop-blur-sm flex flex-col shadow-lg h-full max-h-screen">
+        {/* Direct Message Chat with CEO */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <DirectMessageChat 
+            agent={ceoAgent}
+            className="flex-1 min-h-0"
+          />
         </div>
 
         {/* Quick Stats Panel - Enhanced */}

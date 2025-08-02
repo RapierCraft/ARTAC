@@ -20,6 +20,9 @@ interface CommunicationStore {
   // AI Agent typing states
   agentTyping: Record<string, { agentName: string; isTyping: boolean }> // channelId -> agent info
   
+  // Auto-refresh
+  refreshInterval: NodeJS.Timeout | null
+  
   // UI State
   showUserList: boolean
   showThreadPanel: boolean
@@ -72,10 +75,6 @@ interface CommunicationStore {
   searchMessages: (query: string, channelId?: string) => Message[]
   searchUsers: (query: string) => User[]
   
-  // UI actions
-  toggleUserList: () => void
-  toggleThreadPanel: () => void
-  toggleMemoPanel: () => void
   setSearchQuery: (query: string) => void
   toggleUserSelection: (userId: string) => void
   clearSelectedUsers: () => void
@@ -390,6 +389,7 @@ export const useCommunicationStore = create<CommunicationStore>()(
       error: null,
       notificationSettings: null,
       agentTyping: {},
+      refreshInterval: null,
       
       // UI State
       showUserList: true,
@@ -432,7 +432,7 @@ export const useCommunicationStore = create<CommunicationStore>()(
         set(state => ({
           channels: state.channels.map(channel =>
             channel.id === channelId
-              ? { ...channel, members: [...new Set([...channel.members, currentUser.id])] }
+              ? { ...channel, members: [...Array.from(new Set([...channel.members, currentUser.id]))] }
               : channel
           )
         }))
@@ -471,139 +471,54 @@ export const useCommunicationStore = create<CommunicationStore>()(
         }
 
         console.log('Communication store sendMessage:', { channelId, content, mentions })
-        console.log('Current messages for this channel:', get().messages[channelId])
 
-        // Determine which agent will respond based on channel (moved to top for both online/offline paths)
-        let agentName = 'AI Agent'
-        
-        if (channelId === 'ceo' || channelId === 'channel-ceo' || mentions.includes('ceo') || content.toLowerCase().includes('@ceo')) {
-          agentName = 'ARTAC CEO'
-        } else if (channelId === 'hr' || channelId === 'channel-hr' || mentions.includes('hr') || content.toLowerCase().includes('@hr')) {
-          agentName = 'HR Manager'
-        } else if (channelId === 'tech' || channelId === 'channel-tech' || mentions.includes('tech') || content.toLowerCase().includes('@tech')) {
-          agentName = 'Tech Lead'
-        } else if (channelId === 'finance' || channelId === 'channel-finance' || mentions.includes('finance') || content.toLowerCase().includes('@finance')) {
-          agentName = 'Finance Manager'
+        // Create user message immediately and show it
+        const userMessage: Message = {
+          id: `user-${Date.now()}`,
+          channelId,
+          userId: currentUser.id,
+          content,
+          type: 'text',
+          timestamp: new Date(),
+          mentions,
+          reactions: [],
+          isPinned: false,
+          replyTo
         }
 
-        console.log('Determined agent for response:', agentName)
+        // Show user message immediately for instant feedback
+        set(state => ({
+          messages: {
+            ...state.messages,
+            [channelId]: [...(state.messages[channelId] || []), userMessage]
+          }
+        }))
 
-        // Check if backend is connected
-        const isBackendOnline = await get().checkBackendConnection()
+        // Persist to localStorage for page reload recovery
+        const currentMessages = get().messages[channelId] || []
+        const updatedMessages = [...currentMessages, userMessage]
+        try {
+          localStorage.setItem(`artac_messages_${channelId}`, JSON.stringify(updatedMessages))
+        } catch (error) {
+          console.warn('Failed to persist messages to localStorage:', error)
+        }
+
+        // Determine which agent will respond
+        let agentName = 'AI Agent'
+        const isCEOChannel = (
+          channelId === 'ceo' || 
+          channelId === 'channel-ceo' || 
+          channelId.includes('ceo') ||
+          mentions.includes('ceo') || 
+          content.toLowerCase().includes('@ceo')
+        )
+
+        if (isCEOChannel) {
+          agentName = 'ARTAC CEO'
+        }
 
         try {
-          if (isBackendOnline) {
-            // Use real API
-            const response = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                channel_id: channelId,
-                content: content,
-                mentions: mentions,
-                reply_to: replyTo
-              })
-            })
-            
-            if (response.ok) {
-              // Message sent successfully, reload messages to get the latest
-              await get().loadMessages(channelId)
-              
-              // Check if this is CEO channel and call real CEO API
-              if (agentName === 'ARTAC CEO') {
-                console.log('Triggering CEO response after successful message send...')
-                
-                // Show typing indicator
-                set(state => ({
-                  agentTyping: {
-                    ...state.agentTyping,
-                    [channelId]: { agentName, isTyping: true }
-                  }
-                }))
-                
-                // Call CEO API for response
-                setTimeout(async () => {
-                  try {
-                    const ceoResponse = await fetch('http://localhost:8000/api/v1/ceo/chat', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        message: content,
-                        user_id: currentUser.id
-                      })
-                    })
-                    
-                    if (ceoResponse.ok) {
-                      const data = await ceoResponse.json()
-                      const aiResponse: Message = {
-                        id: `ai-${Date.now()}`,
-                        channelId,
-                        userId: 'ceo-001',
-                        content: data.message,
-                        type: 'text',
-                        timestamp: new Date(),
-                        mentions: [],
-                        reactions: [],
-                        isPinned: false
-                      }
-                      
-                      // Add CEO response to messages
-                      set(state => ({
-                        messages: {
-                          ...state.messages,
-                          [channelId]: [...(state.messages[channelId] || []), aiResponse]
-                        },
-                        agentTyping: {
-                          ...state.agentTyping,
-                          [channelId]: { agentName: '', isTyping: false }
-                        }
-                      }))
-                    } else {
-                      console.error('CEO API call failed:', ceoResponse.statusText)
-                    }
-                  } catch (error) {
-                    console.error('CEO API error:', error)
-                  }
-                }, 1500) // 1.5 second delay for CEO response
-              }
-              return
-            } else {
-              console.error('Failed to send message via API:', response.statusText)
-              // Fall through to mock implementation
-            }
-          }
-          // 1. IMMEDIATELY add user message to UI (optimistic update)
-          const userMessage: Message = {
-            id: `temp-${Date.now()}`,
-            channelId,
-            userId: currentUser.id,
-            content,
-            type: 'text',
-            timestamp: new Date(),
-            mentions,
-            reactions: [],
-            isPinned: false,
-            replyTo
-          }
-
-          // Show user message immediately
-          set(state => ({
-            messages: {
-              ...state.messages,
-              [channelId]: [...(state.messages[channelId] || []), userMessage]
-            }
-          }))
-
-          // 2. Show typing indicator for AI agent response
-          console.log('Showing AI agent typing indicator...')
-          
-          // Agent name already determined at top of function
-          
-          // Set agent typing state
+          // Show typing indicator
           set(state => ({
             agentTyping: {
               ...state.agentTyping,
@@ -611,155 +526,29 @@ export const useCommunicationStore = create<CommunicationStore>()(
             }
           }))
 
-          // 3. Send to backend API (with timeout and error handling)
-          console.log(`Sending to ${channelId} via API...`)
-          
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-          
+          // Send message to backend
           const response = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`, {
             method: 'POST',
-            signal: controller.signal,
             headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json'
             },
             body: JSON.stringify({
               channel_id: channelId,
-              content,
-              mentions,
+              content: content,
+              mentions: mentions,
               reply_to: replyTo
             })
           })
-          
-          clearTimeout(timeoutId)
 
-          if (response.ok) {
-            console.log('Message sent to API successfully')
-            
-            // 4. Function to refresh and get real messages from backend
-            const refreshMessages = async () => {
-              const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/${channelId}/messages`)
-              if (messagesResponse.ok) {
-                const updatedMessages = await messagesResponse.json()
-                console.log('Updated messages received:', updatedMessages.length)
-                
-                // Transform API response to match frontend Message interface
-                const transformedMessages = updatedMessages.map((msg: any) => ({
-                  id: msg.id,
-                  channelId: msg.channel_id,
-                  userId: msg.user_id,
-                  content: msg.content,
-                  type: 'text',
-                  timestamp: new Date(msg.timestamp),
-                  mentions: msg.mentions || [],
-                  reactions: [],
-                  isPinned: false,
-                  replyTo: msg.reply_to
-                }))
-                
-                // Check for mentions and trigger notifications
-                const { currentUser } = get()
-                transformedMessages.forEach(msg => {
-                  // Skip if it's our own message
-                  if (msg.userId === currentUser?.id) return
-                  
-                  // Check for mentions of current user
-                  if (msg.mentions.includes(currentUser?.id || '')) {
-                    // Use dynamic import to avoid circular dependency
-                    import('./notification-store').then(({ useNotificationStore }) => {
-                      const { addNotification } = useNotificationStore.getState()
-                      addNotification({
-                        type: 'mention',
-                        title: `You were mentioned`,
-                        message: `In #${state.channels.find(c => c.id === channelId)?.name || 'channel'}: ${msg.content.substring(0, 100)}`,
-                        channelId: msg.channelId,
-                        userId: msg.userId,
-                        messageId: msg.id,
-                        actionUrl: `/channel/${channelId}`
-                      })
-                    })
-                  }
-                  
-                  // Check for replies to current user's messages
-                  if (msg.replyTo) {
-                    const originalMessage = state.messages[channelId]?.find(m => m.id === msg.replyTo)
-                    if (originalMessage?.userId === currentUser?.id) {
-                      import('./notification-store').then(({ useNotificationStore }) => {
-                        const { addNotification } = useNotificationStore.getState()
-                        addNotification({
-                          type: 'reply',
-                          title: `Someone replied to your message`,
-                          message: `In #${state.channels.find(c => c.id === channelId)?.name || 'channel'}: ${msg.content.substring(0, 100)}`,
-                          channelId: msg.channelId,
-                          userId: msg.userId,
-                          messageId: msg.id,
-                          actionUrl: `/channel/${channelId}`
-                        })
-                      })
-                    }
-                  }
-                })
-
-                // Clear agent typing indicator and replace with real messages
-                set(state => ({
-                  messages: {
-                    ...state.messages,
-                    [channelId]: transformedMessages.filter(msg => !msg.isTyping)
-                  },
-                  agentTyping: {
-                    ...state.agentTyping,
-                    [channelId]: { agentName: state.agentTyping[channelId]?.agentName || 'AI Agent', isTyping: false }
-                  }
-                }))
-                
-                return updatedMessages.length
-              }
-              return 0
-            }
-            
-            // 5. Poll for AI agent response
-            let attempts = 0
-            const maxAttempts = 10
-            const pollInterval = 2000 // 2 seconds
-            
-            const pollForResponse = async () => {
-              attempts++
-              const messageCount = await refreshMessages()
-              
-              // If we found an AI response or reached max attempts, stop polling
-              if (messageCount > 1 || attempts >= maxAttempts) {
-                console.log(`AI agent response polling completed. Attempts: ${attempts}, Messages: ${messageCount}`)
-                return
-              }
-              
-              // Continue polling
-              setTimeout(pollForResponse, pollInterval)
-            }
-            
-            // Start polling after a short delay
-            setTimeout(pollForResponse, 1000)
-            
-            // Clear typing indicator after max time regardless
-            setTimeout(() => {
-              set(state => ({
-                agentTyping: {
-                  ...state.agentTyping,
-                  [channelId]: { agentName: state.agentTyping[channelId]?.agentName || 'AI Agent', isTyping: false }
-                }
-              }))
-            }, maxAttempts * pollInterval)
-          } else {
-            console.warn('API response not ok:', response.status, response.statusText)
-            throw new Error(`Backend returned ${response.status}: Failed to send message`)
+          if (!response.ok) {
+            throw new Error(`Backend error: ${response.status}`)
           }
-          
-          // Check if this is CEO channel and call real API
-          if (agentName === 'ARTAC CEO') {
-            // Call real CEO API
+
+          // If CEO channel, get AI response
+          if (isCEOChannel) {
             setTimeout(async () => {
               try {
-                const response = await fetch('http://localhost:8000/api/v1/ceo/chat', {
+                const ceoResponse = await fetch('http://localhost:8000/api/v1/ceo/chat', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -769,11 +558,13 @@ export const useCommunicationStore = create<CommunicationStore>()(
                     user_id: currentUser.id
                   })
                 })
-                
-                if (response.ok) {
-                  const data = await response.json()
+
+                if (ceoResponse.ok) {
+                  const data = await ceoResponse.json()
+                  
+                  // Add CEO response directly to UI
                   const aiResponse: Message = {
-                    id: `ai-${Date.now()}`,
+                    id: `ceo-${Date.now()}`,
                     channelId,
                     userId: 'ceo-001',
                     content: data.message,
@@ -781,9 +572,9 @@ export const useCommunicationStore = create<CommunicationStore>()(
                     timestamp: new Date(),
                     mentions: [],
                     reactions: [],
-                    metadata: data.project_data ? { projectData: data.project_data } : undefined
+                    isPinned: false
                   }
-                  
+
                   set(state => ({
                     messages: {
                       ...state.messages,
@@ -791,83 +582,97 @@ export const useCommunicationStore = create<CommunicationStore>()(
                     },
                     agentTyping: {
                       ...state.agentTyping,
-                      [channelId]: { agentName: agentName, isTyping: false }
+                      [channelId]: { agentName: '', isTyping: false }
                     }
                   }))
+
+                  // Persist CEO response to localStorage
+                  const allMessages = [...(get().messages[channelId] || []), aiResponse]
+                  try {
+                    localStorage.setItem(`artac_messages_${channelId}`, JSON.stringify(allMessages))
+                  } catch (error) {
+                    console.warn('Failed to persist CEO response to localStorage:', error)
+                  }
                 } else {
-                  console.error('CEO API call failed:', response.statusText)
                   // Fallback to mock response
-                  const aiResponse = generateMockAIResponse(content, channelId, currentAgentName)
-                  if (aiResponse) {
+                  const mockResponse = generateMockAIResponse(content, channelId, agentName)
+                  if (mockResponse) {
                     set(state => ({
                       messages: {
                         ...state.messages,
-                        [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                        [channelId]: [...(state.messages[channelId] || []), mockResponse]
                       },
                       agentTyping: {
                         ...state.agentTyping,
-                        [channelId]: { agentName: currentAgentName, isTyping: false }
+                        [channelId]: { agentName: '', isTyping: false }
                       }
                     }))
+                    
+                    // Persist mock response to localStorage
+                    const allMessages = [...(get().messages[channelId] || []), mockResponse]
+                    try {
+                      localStorage.setItem(`artac_messages_${channelId}`, JSON.stringify(allMessages))
+                    } catch (error) {
+                      console.warn('Failed to persist mock response to localStorage:', error)
+                    }
                   }
                 }
               } catch (error) {
                 console.error('CEO API error:', error)
-                // Fallback to mock response
-                const aiResponse = generateMockAIResponse(content, channelId, currentAgentName)
-                if (aiResponse) {
-                  set(state => ({
-                    messages: {
-                      ...state.messages,
-                      [channelId]: [...(state.messages[channelId] || []), aiResponse]
-                    },
-                    agentTyping: {
-                      ...state.agentTyping,
-                      [channelId]: { agentName: agentName, isTyping: false }
-                    }
-                  }))
-                }
-              }
-            }, 1500)
-          } else {
-            // Use mock responses for other agents
-            setTimeout(() => {
-              const currentState = get()
-              const currentAgentName = currentState.agentTyping[channelId]?.agentName || 'AI Agent'
-              const aiResponse = generateMockAIResponse(content, channelId, currentAgentName)
-              if (aiResponse) {
+                // Clear typing indicator
                 set(state => ({
-                  messages: {
-                    ...state.messages,
-                    [channelId]: [...(state.messages[channelId] || []), aiResponse]
+                  agentTyping: {
+                    ...state.agentTyping,
+                    [channelId]: { agentName: '', isTyping: false }
                   }
                 }))
               }
-            }, 2000) // 2 second delay for mock AI response
+            }, 1500) // 1.5 second delay for realism
+          } else {
+            // For non-CEO channels, just clear typing indicator
+            setTimeout(() => {
+              set(state => ({
+                agentTyping: {
+                  ...state.agentTyping,
+                  [channelId]: { agentName: '', isTyping: false }
+                }
+              }))
+            }, 1000)
           }
+
         } catch (error) {
-          console.warn('Failed to send message:', error)
+          console.error('Failed to send message:', error)
           
-          // Clear typing indicator
+          // Clear typing indicator and show mock response for offline mode
           set(state => ({
             agentTyping: {
               ...state.agentTyping,
-              [channelId]: { agentName: state.agentTyping[channelId]?.agentName || 'AI Agent', isTyping: false }
+              [channelId]: { agentName: '', isTyping: false }
             }
           }))
-          
-          // Show offline mode mock response
-          setTimeout(() => {
-            const aiResponse = generateMockAIResponse(content, channelId, agentName)
-            if (aiResponse) {
-              set(state => ({
-                messages: {
-                  ...state.messages,
-                  [channelId]: [...(state.messages[channelId] || []), aiResponse]
+
+          // Show offline mock response if CEO
+          if (isCEOChannel) {
+            setTimeout(() => {
+              const mockResponse = generateMockAIResponse(content, channelId, agentName)
+              if (mockResponse) {
+                set(state => ({
+                  messages: {
+                    ...state.messages,
+                    [channelId]: [...(state.messages[channelId] || []), mockResponse]
+                  }
+                }))
+                
+                // Persist offline mock response to localStorage
+                const allMessages = [...(get().messages[channelId] || []), mockResponse]
+                try {
+                  localStorage.setItem(`artac_messages_${channelId}`, JSON.stringify(allMessages))
+                } catch (error) {
+                  console.warn('Failed to persist offline mock response to localStorage:', error)
                 }
-              }))
-            }
-          }, 2000)
+              }
+            }, 2000)
+          }
         }
       },
 
@@ -1028,7 +833,7 @@ export const useCommunicationStore = create<CommunicationStore>()(
                 [parentMessageId]: {
                   ...existingThread,
                   messages: [...existingThread.messages, threadMessage],
-                  participants: [...new Set([...existingThread.participants, currentUser.id])],
+                  participants: [...Array.from(new Set([...existingThread.participants, currentUser.id]))],
                   lastActivity: new Date()
                 }
               }
@@ -1067,7 +872,7 @@ export const useCommunicationStore = create<CommunicationStore>()(
         set(state => ({
           memos: state.memos.map(memo =>
             memo.id === memoId
-              ? { ...memo, readBy: [...new Set([...memo.readBy, currentUser.id])] }
+              ? { ...memo, readBy: [...Array.from(new Set([...memo.readBy, currentUser.id]))] }
               : memo
           )
         }))
@@ -1144,8 +949,28 @@ export const useCommunicationStore = create<CommunicationStore>()(
           // Load messages for all channels from backend
           let messagesData: Record<string, Message[]> = {}
           
+          // First, load any persisted messages from localStorage
+          const loadPersistedMessages = (channelId: string): Message[] => {
+            try {
+              const persistedData = localStorage.getItem(`artac_messages_${channelId}`)
+              if (persistedData) {
+                const parsed = JSON.parse(persistedData)
+                return parsed.map((msg: any) => ({
+                  ...msg,
+                  timestamp: new Date(msg.timestamp)
+                }))
+              }
+            } catch (error) {
+              console.warn(`Failed to load persisted messages for ${channelId}:`, error)
+            }
+            return []
+          }
+          
           for (const channel of channelsData) {
             try {
+              // Load persisted messages first
+              const persistedMessages = loadPersistedMessages(channel.id)
+              
               const messagesResponse = await fetch(`http://localhost:8000/api/v1/communication/channels/${channel.id}/messages`, {
                 headers: {
                   'Accept': 'application/json',
@@ -1171,14 +996,28 @@ export const useCommunicationStore = create<CommunicationStore>()(
                   replyTo: msg.reply_to
                 }))
                 
-                messagesData[channel.id] = transformedMessages
+                // Merge backend messages with persisted local messages
+                const allMessages = [...transformedMessages, ...persistedMessages]
+                // Remove duplicates based on content and timestamp similarity
+                const uniqueMessages = allMessages.filter((msg, index, arr) => {
+                  return !arr.some((otherMsg, otherIndex) => 
+                    otherIndex < index &&
+                    otherMsg.content === msg.content &&
+                    otherMsg.userId === msg.userId &&
+                    Math.abs(otherMsg.timestamp.getTime() - msg.timestamp.getTime()) < 5000 // 5 seconds tolerance
+                  )
+                })
+                uniqueMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+                
+                messagesData[channel.id] = uniqueMessages
               } else {
-                // Initialize empty messages for channels with no messages
-                messagesData[channel.id] = []
+                // Use persisted messages if backend fails
+                messagesData[channel.id] = persistedMessages
               }
             } catch (msgError) {
               console.warn(`Failed to fetch messages for channel ${channel.id}:`, msgError)
-              messagesData[channel.id] = []
+              // Fallback to persisted messages
+              messagesData[channel.id] = loadPersistedMessages(channel.id)
             }
           }
           
@@ -1255,18 +1094,44 @@ export const useCommunicationStore = create<CommunicationStore>()(
             error: null
           })
           
+          // Force a refresh of the store to trigger UI updates
+          get().setActiveChannel('ceo')
+          
           console.log(`🏠 Home organization: Showing ${homeChannels.length} base channels`)
           
         } catch (error) {
           console.warn('Communication store: Backend unavailable, using offline mode ⚠️')
           console.warn('Error details:', error)
           
-          // Only use mock data when backend is completely unavailable
+          // Load persisted messages even in offline mode
           const mockData = generateMockData()
+          const offlineMessages = { ...mockData.messages }
+          
+          // Try to load persisted messages for key channels
+          const keyChannels = ['ceo', 'channel-ceo', 'general', 'channel-general']
+          keyChannels.forEach((channelId: string) => {
+            try {
+              const persistedData = localStorage.getItem(`artac_messages_${channelId}`)
+              if (persistedData) {
+                const parsed = JSON.parse(persistedData)
+                const messages = parsed.map((msg: any) => ({
+                  ...msg,
+                  timestamp: new Date(msg.timestamp)
+                }))
+                if (messages.length > 0) {
+                  offlineMessages[channelId] = messages
+                  console.log(`Loaded ${messages.length} persisted messages for ${channelId}`)
+                }
+              }
+            } catch (error) {
+              console.warn(`Failed to load persisted messages for ${channelId}:`, error)
+            }
+          })
+          
           set({
             users: mockData.users,
             channels: mockData.channels,
-            messages: mockData.messages,
+            messages: offlineMessages,
             memos: mockData.memos,
             currentUser: mockData.users.find(u => u.id === 'current-user') || mockData.users[0],
             activeChannel: 'channel-ceo',
